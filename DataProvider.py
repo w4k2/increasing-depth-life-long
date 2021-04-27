@@ -1,8 +1,10 @@
 from FashionMnistDataset import *
+from CelebADataset import *
+from Cifar10Dataset import *
 from torch.utils.data import DataLoader, SubsetRandomSampler
 
 
-def get_celeba_dataloaders(self, batch_size=128):
+def get_celeba_dataloaders(batch_size=128):
     dataset = CelebADataset().load_dataset()
     dataloaders = [
         DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False, drop_last=True,
@@ -35,7 +37,7 @@ def get_fashion_mnist_dataloaders(self, batch_size=128):
     return dataloaders
 
 
-def get_cifar10_dataloaders(self, batch_size=128):
+def get_cifar10_dataloaders(batch_size=128):
     dataset = Cifar10Dataset().load_dataset()
     dataloaders = [
         DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False, drop_last=True,

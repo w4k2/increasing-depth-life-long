@@ -56,5 +56,5 @@ class CelebADataset:
         y = np.concatenate((y1, y2))
 
         dataset.filename = np.squeeze(x)
-        dataset.attr = torch.squeeze(torch.nn.functional.one_hot(torch.from_numpy(y)))
+        dataset.attr = torch.squeeze(torch.from_numpy(y))
         return dataset

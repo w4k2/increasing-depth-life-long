@@ -8,7 +8,7 @@ import DataProvider
 
 
 def main():
-    dataloaders = DataProvider.get_fashion_mnist_dataloaders(batch_size=32)
+    dataloaders = DataProvider.get_celeba_dataloaders(batch_size=32)
     device = torch.device('cuda')
     crtierion = nn.CrossEntropyLoss()
     crtierion = crtierion.to(device)

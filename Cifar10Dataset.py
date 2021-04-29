@@ -11,9 +11,8 @@ class Cifar10Dataset:
 
         dataset = datasets.CIFAR10(transform=transforms.Compose([
             transforms.Resize((64, 64)),
-            transforms.CenterCrop((64, 64)),
             transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))]),
             download=True, root='./data/datasets/cifar10')
 
         mask = np.asarray(dataset.targets) > 4

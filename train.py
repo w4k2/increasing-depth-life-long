@@ -4,6 +4,7 @@ import torchvision
 import torchvision.transforms as trans
 import matplotlib.pyplot as plt
 import tqdm
+import skmultiflow
 
 import stochastic_depth_model
 import DataProvider
@@ -15,13 +16,14 @@ def main():
     crtierion = nn.CrossEntropyLoss()
     crtierion = crtierion.to(device)
 
-    # model = stochastic_depth_model.resnet18_StoDepth_lineardecay(num_classes=2)
+    model = stochastic_depth_model.resnet18_StoDepth_lineardecay(num_classes=3)
     # model.layer3[1].prob = 0.0
     # model.layer3[1].m = torch.distributions.bernoulli.Bernoulli(torch.Tensor([0.0]))
-    model = torchvision.models.resnet50(num_classes=3)
+    # model = torchvision.models.resnet50(num_classes=3)
     model = model.to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0000001)
+    drift_detector = skmultiflow.drift_detection.DDM(out_control_level=1.5)
 
     batch_acc = []
 
@@ -37,12 +39,17 @@ def main():
             pred = model(img)
             acc = sum(torch.argmax(torch.softmax(pred, dim=1), keepdim=False, dim=1) == target) / target.shape[0]
             acc = acc.item()
-            if i % 100 == 0:
-                pbar.set_description(f'acc = {acc}')
             batch_acc.append(acc)
 
             loss = crtierion(pred, target)
             loss.backward()
+
+            loss_value = loss.mean(dim=0).item()
+            if i % 10 == 0:
+                pbar.set_description(f'loss = {loss_value} acc = {acc}')
+            drift_detector.add_element(loss_value)
+            if drift_detector.detected_change():
+                print(f'Change has been detected in batch: {i}')
 
             optimizer.step()
 

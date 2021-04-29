@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torchvision
 import torchvision.transforms as trans
+import matplotlib.pyplot as plt
+import tqdm
 
 import stochastic_depth_model
 import DataProvider
@@ -19,26 +21,38 @@ def main():
     # model = torchvision.models.resnet50(num_classes=10)
     model = model.to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.0000001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0000001)
+
+    batch_acc = []
 
     model.train()
     for dataloader in dataloaders:
-
-        for img, target in dataloader:
+        pbar = tqdm.tqdm(dataloader, total=len(dataloader))
+        for i, (img, target) in enumerate(pbar):
             model.zero_grad()
             img = img.to(device)
             target = target.to(device)
 
             pred = model(img)
             acc = sum(torch.argmax(torch.softmax(pred, dim=1), keepdim=False, dim=1) == target) / target.shape[0]
-            print(acc)
+            acc = acc.item()
+            if i % 100 == 0:
+                pbar.set_description(f'acc = {acc}')
+            batch_acc.append(acc)
 
             loss = crtierion(pred, target)
             loss.backward()
 
             optimizer.step()
 
-        print('\n\ndrift\n\n')
+    plot_acc(batch_acc)
+
+
+def plot_acc(batch_acc):
+    plt.plot(batch_acc)
+    plt.xlabel('batches')
+    plt.ylabel('accuracy')
+    plt.show()
 
 
 if __name__ == '__main__':

@@ -48,5 +48,5 @@ class Cifar10Dataset:
         y = np.concatenate((y1, y2))
 
         dataset.data = x
-        dataset.targets = torch.squeeze(torch.nn.functional.one_hot(torch.from_numpy(y).to(torch.int64)))
+        dataset.targets = torch.squeeze(torch.from_numpy(y).to(torch.int64))
         return dataset

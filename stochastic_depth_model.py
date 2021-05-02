@@ -191,7 +191,9 @@ class ResNet_StoDepth_lineardecay(nn.Module):
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(512 * block.expansion, num_classes)
+        self.fc1 = nn.Linear(512 * block.expansion, num_classes)
+        self.fc2 = nn.Linear(512 * block.expansion, num_classes)
+        self.fc = self.fc1
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -251,7 +253,7 @@ def resnet18_StoDepth_lineardecay(pretrained=False, prob_0_L=[1, 0.5], multFlag=
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet_StoDepth_lineardecay(StoDepth_BasicBlock, prob_0_L, multFlag, [2, 2, 2, 2], **kwargs)
+    model = ResNet_StoDepth_lineardecay(StoDepth_BasicBlock, prob_0_L, multFlag, [4, 4, 4, 4], **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
     return model

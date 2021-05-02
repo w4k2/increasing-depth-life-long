@@ -19,7 +19,7 @@ def main():
     model = stochastic_depth_model.resnet18_StoDepth_lineardecay(num_classes=19)
     # model.layer3[1].prob = 0.0
     # model.layer3[1].m = torch.distributions.bernoulli.Bernoulli(torch.Tensor([0.0]))
-    # model = torchvision.models.resnet50(num_classes=3)
+    # model = torchvision.models.resnet50(num_classes=19)
     model = model.to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0000001)
@@ -28,20 +28,33 @@ def main():
     batch_acc = []
 
     model.train()
-    # deactivate_layers(model, 1)
-    # activate_layers(model, 0)
+    deactivate_layers(model, 1)
+    activate_layers(model, 0)
 
     activate_frist_half = True
 
     dataloader_index = 0
     for dataloader in dataloaders:
-        pbar = tqdm.tqdm(dataloader, total=len(dataloader))
+        if dataloader_index == 10:
+            activate_frist_half = False
+        elif dataloader_index == 20:
+            activate_frist_half = True
+        elif dataloader_index == 30:
+            activate_frist_half = False
+        if activate_frist_half:
+            deactivate_layers(model, 1)
+            activate_layers(model, 0)
+        else:
+            deactivate_layers(model, 0)
+            activate_layers(model, 1)
 
         # for layer_name in ['layer1', 'layer2', 'layer3', 'layer4']:
         #     print(layer_name)
         #     layer = getattr(model, layer_name)
         #     for i in range(len(layer)):
         #         print(layer[i].prob)
+
+        pbar = tqdm.tqdm(dataloader, total=len(dataloader))
 
         for i, (img, target) in enumerate(pbar):
             model.zero_grad()
@@ -95,6 +108,10 @@ def activate_layers(model, index):
             if i % 2 == index:
                 layer[i].prob = 0.9
                 layer[i].m = torch.distributions.bernoulli.Bernoulli(torch.Tensor([0.9]))
+    if index == 0:
+        model.fc = model.fc1
+    else:
+        model.fc = model.fc2
 
 
 def plot_acc(batch_acc):

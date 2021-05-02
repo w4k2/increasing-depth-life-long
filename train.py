@@ -16,7 +16,7 @@ def main():
     crtierion = nn.CrossEntropyLoss()
     crtierion = crtierion.to(device)
 
-    model = stochastic_depth_model.resnet18_StoDepth_lineardecay(num_classes=3)
+    model = stochastic_depth_model.resnet18_StoDepth_lineardecay(num_classes=19)
     # model.layer3[1].prob = 0.0
     # model.layer3[1].m = torch.distributions.bernoulli.Bernoulli(torch.Tensor([0.0]))
     # model = torchvision.models.resnet50(num_classes=3)
@@ -28,8 +28,21 @@ def main():
     batch_acc = []
 
     model.train()
+    # deactivate_layers(model, 1)
+    # activate_layers(model, 0)
+
+    activate_frist_half = True
+
+    dataloader_index = 0
     for dataloader in dataloaders:
         pbar = tqdm.tqdm(dataloader, total=len(dataloader))
+
+        # for layer_name in ['layer1', 'layer2', 'layer3', 'layer4']:
+        #     print(layer_name)
+        #     layer = getattr(model, layer_name)
+        #     for i in range(len(layer)):
+        #         print(layer[i].prob)
+
         for i, (img, target) in enumerate(pbar):
             model.zero_grad()
             img = img.to(device)
@@ -51,9 +64,37 @@ def main():
             if drift_detector.detected_change():
                 print(f'Change has been detected in batch: {i}')
 
+                # if dataloader_index % 10 == 0:
+                #     activate_frist_half = not activate_frist_half
+                # if activate_frist_half:
+                #     deactivate_layers(model, 1)
+                #     activate_layers(model, 0)
+                # else:
+                #     deactivate_layers(model, 0)
+                #     activate_layers(model, 1)
+
             optimizer.step()
+        dataloader_index += 1
 
     plot_acc(batch_acc)
+
+
+def deactivate_layers(model, index):
+    for layer_name in ['layer1', 'layer2', 'layer3', 'layer4']:
+        layer = getattr(model, layer_name)
+        for i in range(len(layer)):
+            if i % 2 == index:
+                layer[i].prob = 0.1
+                layer[i].m = torch.distributions.bernoulli.Bernoulli(torch.Tensor([0.1]))
+
+
+def activate_layers(model, index):
+    for layer_name in ['layer1', 'layer2', 'layer3', 'layer4']:
+        layer = getattr(model, layer_name)
+        for i in range(len(layer)):
+            if i % 2 == index:
+                layer[i].prob = 0.9
+                layer[i].m = torch.distributions.bernoulli.Bernoulli(torch.Tensor([0.9]))
 
 
 def plot_acc(batch_acc):

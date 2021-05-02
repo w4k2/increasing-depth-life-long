@@ -58,91 +58,28 @@ def get_cifar10_dataloaders(batch_size=128):
 
 
 def get_tinyimagenet_dataloaders(batch_size=128):
+    # dataloaders = list()
+    # for _ in range(2):
+    #     for _ in range(10):
+    #         dataloaders.append(DataLoader(dataset=tiny_imagenet_dataset(['n02123394', 'n02123045', 'n02106662', 'n02113799' 'n02190166',
+    #                            'n02206856'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True))
+    #     for _ in range(10):
+    #         dataloaders.append(DataLoader(dataset=tiny_imagenet_dataset(['n02125311', 'n02129165', 'n02099712', 'n02099601',
+    #                            'n02226429', 'n02231487'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True))
 
-    dataloaders = [
-        DataLoader(dataset=tiny_imagenet_dataset(['n02123394', 'n02123045', 'n02106662', 'n02113799' 'n02190166',
-                   'n02206856'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02123394', 'n02123045', 'n02106662', 'n02113799' 'n02190166',
-                   'n02206856'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02123394', 'n02123045', 'n02106662', 'n02113799' 'n02190166',
-                   'n02206856'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02123394', 'n02123045', 'n02106662', 'n02113799' 'n02190166',
-                   'n02206856'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02123394', 'n02123045', 'n02106662', 'n02113799' 'n02190166',
-                   'n02206856'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02123394', 'n02123045', 'n02106662', 'n02113799' 'n02190166',
-                   'n02206856'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02123394', 'n02123045', 'n02106662', 'n02113799' 'n02190166',
-                   'n02206856'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02123394', 'n02123045', 'n02106662', 'n02113799' 'n02190166',
-                   'n02206856'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02123394', 'n02123045', 'n02106662', 'n02113799' 'n02190166',
-                   'n02206856'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02123394', 'n02123045', 'n02106662', 'n02113799' 'n02190166',
-                   'n02206856'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02125311', 'n02129165', 'n02099712', 'n02099601', 'n02226429',
-                   'n02231487'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02125311', 'n02129165', 'n02099712', 'n02099601', 'n02226429',
-                   'n02231487'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02125311', 'n02129165', 'n02099712', 'n02099601', 'n02226429',
-                   'n02231487'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02125311', 'n02129165', 'n02099712', 'n02099601', 'n02226429',
-                   'n02231487'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02125311', 'n02129165', 'n02099712', 'n02099601', 'n02226429',
-                   'n02231487'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02125311', 'n02129165', 'n02099712', 'n02099601', 'n02226429',
-                   'n02231487'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02125311', 'n02129165', 'n02099712', 'n02099601', 'n02226429',
-                   'n02231487'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02125311', 'n02129165', 'n02099712', 'n02099601', 'n02226429',
-                   'n02231487'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02125311', 'n02129165', 'n02099712', 'n02099601', 'n02226429',
-                   'n02231487'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02123394', 'n02123045', 'n02106662', 'n02113799' 'n02190166',
-                   'n02206856'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02123394', 'n02123045', 'n02106662', 'n02113799' 'n02190166',
-                   'n02206856'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02123394', 'n02123045', 'n02106662', 'n02113799' 'n02190166',
-                   'n02206856'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02123394', 'n02123045', 'n02106662', 'n02113799' 'n02190166',
-                   'n02206856'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02123394', 'n02123045', 'n02106662', 'n02113799' 'n02190166',
-                   'n02206856'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02123394', 'n02123045', 'n02106662', 'n02113799' 'n02190166',
-                   'n02206856'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02123394', 'n02123045', 'n02106662', 'n02113799' 'n02190166',
-                   'n02206856'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02123394', 'n02123045', 'n02106662', 'n02113799' 'n02190166',
-                   'n02206856'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02123394', 'n02123045', 'n02106662', 'n02113799' 'n02190166',
-                   'n02206856'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02123394', 'n02123045', 'n02106662', 'n02113799' 'n02190166',
-                   'n02206856'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02125311', 'n02129165', 'n02099712', 'n02099601', 'n02226429',
-                   'n02231487'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02125311', 'n02129165', 'n02099712', 'n02099601', 'n02226429',
-                   'n02231487'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02125311', 'n02129165', 'n02099712', 'n02099601', 'n02226429',
-                   'n02231487'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02125311', 'n02129165', 'n02099712', 'n02099601', 'n02226429',
-                   'n02231487'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02125311', 'n02129165', 'n02099712', 'n02099601', 'n02226429',
-                   'n02231487'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02125311', 'n02129165', 'n02099712', 'n02099601', 'n02226429',
-                   'n02231487'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02125311', 'n02129165', 'n02099712', 'n02099601', 'n02226429',
-                   'n02231487'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02125311', 'n02129165', 'n02099712', 'n02099601', 'n02226429',
-                   'n02231487'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        DataLoader(dataset=tiny_imagenet_dataset(['n02125311', 'n02129165', 'n02099712', 'n02099601', 'n02226429',
-                   'n02231487'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        # DataLoader(dataset=tiny_imagenet_dataset(['n02124075', 'n02094433', 'n02085620', 'n02233338', 'n02236044',
-        #            'n02268443'], [0, 1, 1, 2, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        # DataLoader(dataset=tiny_imagenet_dataset(['n02123394', 'n02125311', 'n02106662', 'n02113799' 'n02190166',
-        #            'n02206856'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        # DataLoader(dataset=tiny_imagenet_dataset(['n02123045', 'n02129165', 'n02099712', 'n02099601', 'n02226429',
-        #            'n02231487'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-        # DataLoader(dataset=tiny_imagenet_dataset(['n02124075', 'n02094433', 'n02085620', 'n02233338', 'n02236044',
-        #            'n02268443'], [0, 1, 1, 2, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True),
-    ]
+    dataloaders = list()
+    for _ in range(2):
+        for _ in range(10):
+            dataloaders.append(DataLoader(dataset=tiny_imagenet_dataset(
+                ['n02129165', 'n02106662', 'n02395406', 'n02486410', 'n03126707', 'n01644900', 'n03662601', 'n03179701', 'n09332890',
+                    'n07768694', 'n08496334', 'n02268443', 'n03937543', 'n07711569', 'n03930313', 'n03400231', 'n04540053', 'n01774384'],
+                [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]),
+                batch_size=batch_size, shuffle=True, drop_last=True))
+        for _ in range(10):
+            dataloaders.append(DataLoader(dataset=tiny_imagenet_dataset(
+                ['n02125311', 'n02094433', 'n02415577', 'n02480495', 'n07646821', 'n01629819', 'n03599486', 'n04099969', 'n09193705',
+                 'n07753592', 'n03763968', 'n07975909', 'n03983396', 'n07583066', 'n02892201', 'n04398044', 'n02802426', 'n01984695'],
+                [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]),
+                batch_size=batch_size, shuffle=True, drop_last=True))
+
     return dataloaders

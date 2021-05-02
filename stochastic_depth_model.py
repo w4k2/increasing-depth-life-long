@@ -302,7 +302,7 @@ def resnet152_StoDepth_lineardecay(pretrained=False, prob_0_L=[1, 0.5], multFlag
 
 
 if __name__ == '__main__':
-    model = resnet152_StoDepth_lineardecay()
+    model = resnet18_StoDepth_lineardecay()
     model = model.to('cuda')
     inp = torch.randn(1, 3, 224, 224)
     inp = inp.to('cuda')

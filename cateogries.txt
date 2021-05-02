@@ -1,0 +1,191 @@
+feline, felid: class 0
+lion, king of beasts, Panthera leo: n02129165
+cougar, puma, catamount, mountain lion, painter, panther, Felis concolor: n02125311
+Egyptian cat: n02124075
+Persian cat: n02123394
+tabby, tabby cat: n02123045
+
+dog, domestic dog, Canis familiaris: class 1
+German shepherd, German shepherd dog, German police dog, alsatian: n02106662
+Yorkshire terrier: n02094433
+golden retriever: n02099601
+Chihuahua: n08742578
+standard poodle: n02113799
+Labrador retriever: n02099712
+
+ungulate, hoofed mammal: class 2
+hog, pig, grunter, squealer, Sus scrofa: n02395406
+bighorn, bighorn sheep, cimarron, Rocky Mountain bighorn, Rocky Mountain sheep, Ovis canadensis: n02415577
+gazelle: n02423022
+Arabian camel, dromedary, Camelus dromedarius: n02437312
+ox: n02403003
+bison: n02410509
+
+primate: class 3
+baboon: n02486410
+orangutan, orang, orangutang, Pongo pygmaeus: n02480495
+chimpanzee, chimp, Pan troglodytes: n02481823
+
+bird: class 4
+crane: n03126707
+goose: n07646821
+king penguin, Aptenodytes patagonica: n02056570
+black stork, Ciconia nigra: n02002724
+albatross, mollymawk: n02058221
+
+amphibian: class 5
+tailed frog, bell toad, ribbed toad, tailed toad, Ascaphus trui: n01644900
+European fire salamander, Salamandra salamandra: n01629819
+bullfrog, Rana catesbeiana: n01641577
+
+conveyance, transport: class 6
+lifeboat: n03662601
+jinrikisha, ricksha, rickshaw: n03599486
+limousine, limo: n03670208
+go-kart: n03444034
+convertible: n03100240
+freight car: n03393912
+tractor: n04465666
+school bus: n04146614
+gondola: n03447447
+beach wagon, station wagon, wagon, estate car, beach waggon, station waggon, waggon: n02814533
+projectile, missile: n04008634
+trolleybus, trolley coach, trackless trolley: n04487081
+police van, police wagon, paddy wagon, patrol wagon, wagon, black Maria: n03977966
+bullet train, bullet: n02917067
+sports car, sport car: n04285008
+moving van: n03796401
+
+furniture, piece of furniture, article of furniture: class 7
+desk: n03179701
+rocking chair, rocker: n04099969
+chest: n03014705
+altar: n02699494
+dining table, board: n03201208
+
+geological formation, formation: class 8
+lakeside, lakeshore: n09332890
+alp: n09193705
+coral reef: n09256479
+cliff, drop, drop-off: n09246464
+seashore, coast, seacoast, sea-coast: n09428293
+chain: n13652994
+
+fruit: class 9
+pomegranate: n07768694
+banana: n07753592
+acorn: n12267677
+orange: n14991210
+lemon: n07749582
+
+clothing, article of clothing, vesture, wear, wearable, habiliment: class 10
+apron: n08496334
+military uniform: n03763968
+sock: n04254777
+poncho: n03980874
+bikini, two-piece: n02837789
+bow tie, bow-tie, bowtie: n02883205
+cardigan: n02963159
+Christmas stocking: n03026506
+miniskirt, mini: n03770439
+sombrero: n04259630
+kimono: n03617480
+academic gown, academic robe, judge's robe: n02669723
+fur coat: n03404251
+teddy, teddy bear: n04399382
+swimming trunks, bathing trunks: n04371430
+vestment: n04532106
+
+insect: class 11
+dragonfly, darning needle, devil's darning needle, sewing needle, snake feeder, snake doctor, mosquito hawk, skeeter hawk: n02268443
+bee: n07975909
+cockroach, roach: n02233338
+ladybug, ladybeetle, lady beetle, ladybird, ladybird beetle: n02165456
+fly: n03373237
+sulphur butterfly, sulfur butterfly: n02281406
+grasshopper, hopper: n02226429
+monarch, monarch butterfly, milkweed butterfly, Danaus plexippus: n02279972
+walking stick, walkingstick, stick insect: n02231487
+mantis, mantid: n02236044
+
+bottle: class 12
+pill bottle: n03937543
+pop bottle, soda bottle: n03983396
+beer bottle: n02823428
+water jug: n04560804
+
+food, nutrient: class 13
+mashed potato: n07711569
+guacamole: n07583066
+pizza, pizza pie: n07873807
+ice lolly, lolly, lollipop, popsicle: n07615774
+espresso: n07920052
+potpie: n07875152
+slug: n13719102
+pretzel: n07695742
+meat loaf, meatloaf: n07871810
+plate: n07657664
+ice cream, icecream: n07614500
+
+structure, construction: class 14
+picket fence, paling: n03930313
+brass, memorial tablet, plaque: n02892201
+butcher shop, meat market: n02927161
+bannister, banister, balustrade, balusters, handrail: n02788148
+cliff dwelling: n03042490
+scoreboard: n04149813
+viaduct: n04532670
+fountain: n03388043
+barn: n02793495
+obelisk: n03837869
+confectionery, confectionary, candy store: n03089624
+barbershop: n02791270
+turnstile: n04501370
+bathtub, bathing tub, bath, tub: n02808440
+triumphal arch: n04486054
+beacon, lighthouse, beacon light, pharos: n02814860
+steel arch bridge: n04311004
+dam, dike, dyke: n03160309
+suspension bridge: n04366367
+
+kitchen utensil: class 16
+frying pan, frypan, skillet: n03400231
+teapot: n04398044
+wok: n04596742
+
+game equipment: class 17
+volleyball: n04540053
+basketball: n02802426
+punching bag, punch bag, punching ball, punchball: n04023962
+rugby ball: n04118538
+
+arthropod: class 18
+black widow, Latrodectus mactans: n01774384
+spiny lobster, langouste, rock lobster, crawfish, crayfish, sea crawfish: n01984695
+scorpion: n01770393
+American lobster, Northern lobster, Maine lobster, Homarus americanus: n01983481
+tarantula: n01774750
+trilobite: n01768244
+centipede: n01784675
+
+
+feline, felid: 5
+dog, domestic dog, Canis familiaris: 6
+ungulate, hoofed mammal: 6
+primate: 3
+bird: 5
+amphibian: 3
+conveyance, transport: 16
+furniture, piece of furniture, article of furniture: 5
+geological formation, formation: 6
+fruit: 5
+clothing, article of clothing, vesture, wear, wearable, habiliment: 16
+insect: 10
+bottle: 4
+food, nutrient: 11
+structure, construction: 19
+kitchen utensil: 3
+game equipment: 4
+arthropod: 7
+
+

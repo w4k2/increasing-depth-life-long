@@ -22,10 +22,11 @@ def main():
     # model = torchvision.models.resnet50(num_classes=19)
     model = model.to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0000001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-7)
     drift_detector = skmultiflow.drift_detection.DDM(out_control_level=1.5)
 
     batch_acc = []
+    batch_loss = []
 
     model.train()
     deactivate_layers(model, 1)
@@ -71,6 +72,7 @@ def main():
             loss.backward()
 
             loss_value = loss.mean(dim=0).item()
+            batch_loss.append(loss_value)
             if i % 10 == 0:
                 pbar.set_description(f'loss = {loss_value} acc = {acc}')
             drift_detector.add_element(loss_value)
@@ -89,7 +91,7 @@ def main():
             optimizer.step()
         dataloader_index += 1
 
-    plot_acc(batch_acc)
+    plot(batch_acc, batch_loss)
 
 
 def deactivate_layers(model, index):
@@ -97,8 +99,7 @@ def deactivate_layers(model, index):
         layer = getattr(model, layer_name)
         for i in range(len(layer)):
             if i % 2 == index:
-                layer[i].prob = 0.1
-                layer[i].m = torch.distributions.bernoulli.Bernoulli(torch.Tensor([0.1]))
+                layer[i].m = torch.distributions.bernoulli.Bernoulli(torch.Tensor([max(0.3 * layer[i].prob, 0.1)]))
 
 
 def activate_layers(model, index):
@@ -106,18 +107,24 @@ def activate_layers(model, index):
         layer = getattr(model, layer_name)
         for i in range(len(layer)):
             if i % 2 == index:
-                layer[i].prob = 0.9
-                layer[i].m = torch.distributions.bernoulli.Bernoulli(torch.Tensor([0.9]))
+                layer[i].m = torch.distributions.bernoulli.Bernoulli(torch.Tensor([min(1.3 * layer[i].prob, 0.9)]))
     if index == 0:
         model.fc = model.fc1
     else:
         model.fc = model.fc2
 
 
-def plot_acc(batch_acc):
+def plot(batch_acc, batch_loss):
+    plt.figure(1)
     plt.plot(batch_acc)
     plt.xlabel('batches')
     plt.ylabel('accuracy')
+
+    plt.figure(2)
+    plt.plot(batch_loss, 'r')
+    plt.xlabel('batches')
+    plt.ylabel('loss value')
+
     plt.show()
 
 

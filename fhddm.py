@@ -12,8 +12,8 @@ URL: https://link.springer.com/chapter/10.1007/978-3-319-46227-1_7
 
 import math
 
-from dictionary.tornado_dictionary import TornadoDic
-from drift_detection.detector import SuperDetector
+from tornado_dictionary import TornadoDic
+from detector import SuperDetector
 
 
 class FHDDM(SuperDetector):

@@ -5,8 +5,10 @@ import torchvision.transforms as trans
 import matplotlib.pyplot as plt
 import tqdm
 import skmultiflow
+import itertools
 
 import stochastic_depth_model
+import stochastic_depth_modified
 import DataProvider
 
 
@@ -16,10 +18,9 @@ def main():
     crtierion = nn.CrossEntropyLoss()
     crtierion = crtierion.to(device)
 
-    model = stochastic_depth_model.resnet18_StoDepth_lineardecay(num_classes=19)
-    # model.layer3[1].prob = 0.0
-    # model.layer3[1].m = torch.distributions.bernoulli.Bernoulli(torch.Tensor([0.0]))
-    # model = torchvision.models.resnet50(num_classes=19)
+    # model = stochastic_depth_model.resnet18_StoDepth_lineardecay(num_classes=19)
+    model = stochastic_depth_modified.resnet18_StoDepth_lineardecay(num_classes=19)
+    # model = torchvision.models.resnet18(num_classes=19)
     model = model.to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-7)
@@ -29,25 +30,15 @@ def main():
     batch_loss = []
 
     model.train()
-    deactivate_layers(model, 1)
-    activate_layers(model, 0)
+    model.activate_task(0)
 
-    activate_frist_half = True
+    tasks = itertools.cycle((0, 1, 2))
 
     dataloader_index = 0
     for dataloader in dataloaders:
-        if dataloader_index == 10:
-            activate_frist_half = False
-        elif dataloader_index == 20:
-            activate_frist_half = True
-        elif dataloader_index == 30:
-            activate_frist_half = False
-        if activate_frist_half:
-            deactivate_layers(model, 1)
-            activate_layers(model, 0)
-        else:
-            deactivate_layers(model, 0)
-            activate_layers(model, 1)
+        if dataloader_index % 10 == 0:
+            task_index = next(tasks)
+            model.activate_task(task_index)
 
         # for layer_name in ['layer1', 'layer2', 'layer3', 'layer4']:
         #     print(layer_name)
@@ -92,26 +83,6 @@ def main():
         dataloader_index += 1
 
     plot(batch_acc, batch_loss)
-
-
-def deactivate_layers(model, index):
-    for layer_name in ['layer1', 'layer2', 'layer3', 'layer4']:
-        layer = getattr(model, layer_name)
-        for i in range(len(layer)):
-            if i % 2 == index:
-                layer[i].m = torch.distributions.bernoulli.Bernoulli(torch.Tensor([max(0.3 * layer[i].prob, 0.1)]))
-
-
-def activate_layers(model, index):
-    for layer_name in ['layer1', 'layer2', 'layer3', 'layer4']:
-        layer = getattr(model, layer_name)
-        for i in range(len(layer)):
-            if i % 2 == index:
-                layer[i].m = torch.distributions.bernoulli.Bernoulli(torch.Tensor([min(1.3 * layer[i].prob, 0.9)]))
-    if index == 0:
-        model.fc = model.fc1
-    else:
-        model.fc = model.fc2
 
 
 def plot(batch_acc, batch_loss):

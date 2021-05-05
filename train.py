@@ -9,6 +9,7 @@ import itertools
 
 import stochastic_depth_model
 import stochastic_depth_modified
+import fhddm
 import DataProvider
 
 
@@ -24,7 +25,7 @@ def main():
     model = model.to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-7)
-    drift_detector = skmultiflow.drift_detection.DDM(out_control_level=1.5)
+    drift_detector = fhddm.FHDDM()
 
     batch_acc = []
     batch_loss = []
@@ -66,9 +67,9 @@ def main():
             batch_loss.append(loss_value)
             if i % 10 == 0:
                 pbar.set_description(f'loss = {loss_value} acc = {acc}')
-            drift_detector.add_element(loss_value)
-            if drift_detector.detected_change():
-                print(f'Change has been detected in batch: {i}')
+            # drift_detector.add_element(loss_value)
+            # if drift_detector.detected_change():
+            #    print(f'Change has been detected in batch: {i}')
 
                 # if dataloader_index % 10 == 0:
                 #     activate_frist_half = not activate_frist_half

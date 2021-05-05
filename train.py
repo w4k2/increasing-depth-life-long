@@ -14,7 +14,8 @@ import DataProvider
 
 
 def main():
-    dataloaders = DataProvider.get_tinyimagenet_dataloaders(batch_size=32)
+    batch_size = 32
+    dataloaders = DataProvider.get_tinyimagenet_dataloaders(batch_size=batch_size)
     device = torch.device('cuda')
     crtierion = nn.CrossEntropyLoss()
     crtierion = crtierion.to(device)
@@ -25,7 +26,7 @@ def main():
     model = model.to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-7)
-    drift_detector = fhddm.FHDDM()
+    drift_detector = fhddm.FHDDM(n=5*batch_size)
 
     batch_acc = []
     batch_loss = []
@@ -56,6 +57,14 @@ def main():
             target = target.to(device)
 
             pred = model(img)
+
+            predictions = torch.argmax(torch.softmax(pred, dim=1), keepdim=False, dim=1)
+            correct_predictions = predictions == target
+            for prediction in correct_predictions:
+                _, drift_detected = drift_detector.run(prediction)
+                if drift_detected:
+                    print(f'Change has been detected in batch: {i}')
+
             acc = sum(torch.argmax(torch.softmax(pred, dim=1), keepdim=False, dim=1) == target) / target.shape[0]
             acc = acc.item()
             batch_acc.append(acc)
@@ -67,9 +76,6 @@ def main():
             batch_loss.append(loss_value)
             if i % 10 == 0:
                 pbar.set_description(f'loss = {loss_value} acc = {acc}')
-            # drift_detector.add_element(loss_value)
-            # if drift_detector.detected_change():
-            #    print(f'Change has been detected in batch: {i}')
 
                 # if dataloader_index % 10 == 0:
                 #     activate_frist_half = not activate_frist_half

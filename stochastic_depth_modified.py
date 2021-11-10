@@ -170,6 +170,27 @@ class StoDepth_Bottleneck(nn.Module):
         return out
 
 
+class TaskHead(nn.Module):
+    def __init__(self, layer3, layer4, avgpool, fc):
+        super().__init__()
+        self.layer3 = layer3
+        self.layer4 = layer4
+        self.avgpool = avgpool
+        self.fc = fc
+
+    def forward(self, x):
+        feature_maps = self.layer3(x)
+        print('layer 3 output shape = ', x.shape)
+        x = self.layer4(feature_maps)
+        print('layer 4 output shape = ', x.shape)
+
+        x = self.avgpool(x)
+        x = x.view(x.size(0), -1)
+        x = self.fc(x)
+
+        return x, feature_maps
+
+
 class ResNet_StoDepth_lineardecay(nn.Module):
 
     def __init__(self, block, prob_0_L, multFlag, layers, num_classes=1000, zero_init_residual=False):
@@ -188,10 +209,15 @@ class ResNet_StoDepth_lineardecay(nn.Module):
 
         self.layer1 = self._make_layer(block, 64, layers[0])
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
-        self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
-        self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(512 * block.expansion, num_classes)
+        downsample = nn.Sequential(
+            conv1x1(self.inplanes, 256 * block.expansion, stride=2),
+            nn.BatchNorm2d(256 * block.expansion),
+        )
+        self.downsample_block = block(self.prob_now, self.multFlag, self.inplanes, planes=256, stride=2, downsample=downsample)
+        self.prob_now = self.prob_now - self.prob_step
+
+        self.task_heads = nn.ModuleList([])
+        self.add_new_task(block, layers, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -212,8 +238,6 @@ class ResNet_StoDepth_lineardecay(nn.Module):
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
-        # print('self.inplanes= ', self.inplanes)
-        # print('planes = ', planes)
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
                 conv1x1(self.inplanes, planes * block.expansion, stride),
@@ -230,6 +254,24 @@ class ResNet_StoDepth_lineardecay(nn.Module):
 
         return nn.Sequential(*layers)
 
+    def _make_task_layer(self, block, planes, blocks):
+        layers = []
+        self.inplanes = planes * block.expansion
+        for _ in range(1, blocks):
+            layers.append(block(self.prob_now, self.multFlag, self.inplanes, planes))
+            self.prob_now = self.prob_now - self.prob_step
+
+        return nn.Sequential(*layers)
+
+    def add_new_task(self, block, layers, num_classes):
+        layer3 = self._make_task_layer(block, 256, layers[2])
+        layer4 = self._make_layer(block, 512, layers[3], stride=2)
+        avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        fc = nn.Linear(512 * block.expansion, num_classes)
+
+        task_head = TaskHead(layer3, layer4, avgpool, fc)
+        self.task_heads.append(task_head)
+
     def forward(self, x):
         x = self.conv1(x)
         x = self.bn1(x)
@@ -237,15 +279,14 @@ class ResNet_StoDepth_lineardecay(nn.Module):
         x = self.maxpool(x)
 
         x = self.layer1(x)
+        print('layer 1 output shape = ', x.shape)
         x = self.layer2(x)
-        x = self.layer3(x)
-        # print('layer 4 input shape = ', x.shape)
-        x = self.layer4(x)
-        # print('layer 4 output shape = ', x.shape)
-
-        x = self.avgpool(x)
-        x = x.view(x.size(0), -1)
-        x = self.fc(x)
+        print('layer 2 output shape = ', x.shape)
+        x = self.downsample_block(x)
+        print('downsample shape = ', x.shape)
+        feature_maps = x
+        for task_head in self.task_heads:
+            pred, feature_maps = task_head(feature_maps)
 
         return x
 

@@ -309,3 +309,9 @@ if __name__ == '__main__':
 
     output = model(inp)
     # print(output)
+
+    for layer_name in ['layer1', 'layer2', 'layer3', 'layer4']:
+        print(layer_name)
+        layer = getattr(model, layer_name)
+        for i in range(len(layer)):
+            print(layer[i].prob)

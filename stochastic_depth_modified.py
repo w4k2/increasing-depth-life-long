@@ -203,21 +203,24 @@ class ResNet_StoDepth_lineardecay(nn.Module):
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
         self.multFlag = multFlag
-        self.prob_now = prob_0_L[0]
+        prob_now = prob_0_L[0]
         self.prob_delta = prob_0_L[0]-prob_0_L[1]
         self.prob_step = self.prob_delta/(sum(layers)-1)
 
-        self.layer1 = self._make_layer(block, 64, layers[0])
-        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
+        self.layer1, prob_now = self._make_layer(prob_now, block, 64, layers[0])
+        self.layer2, prob_now = self._make_layer(prob_now, block, 128, layers[1], stride=2)
         downsample = nn.Sequential(
             conv1x1(self.inplanes, 256 * block.expansion, stride=2),
             nn.BatchNorm2d(256 * block.expansion),
         )
-        self.downsample_block = block(self.prob_now, self.multFlag, self.inplanes, planes=256, stride=2, downsample=downsample)
-        self.prob_now = self.prob_now - self.prob_step
+        self.downsample_block = block(prob_now, self.multFlag, self.inplanes, planes=256, stride=2, downsample=downsample)
+        self.task_base_prob = prob_now - self.prob_step
 
         self.task_heads = nn.ModuleList([])
-        self.add_new_task(block, layers, num_classes)
+        self.block = block
+        self.layers = layers
+        self.num_classes = num_classes
+        self.add_new_task()
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -236,7 +239,7 @@ class ResNet_StoDepth_lineardecay(nn.Module):
                 elif isinstance(m, StoDepth_lineardecayBasicBlock):
                     nn.init.constant_(m.bn2.weight, 0)
 
-    def _make_layer(self, block, planes, blocks, stride=1):
+    def _make_layer(self, prob_now, block, planes, blocks, stride=1):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
@@ -245,30 +248,31 @@ class ResNet_StoDepth_lineardecay(nn.Module):
             )
 
         layers = []
-        layers.append(block(self.prob_now, self.multFlag, self.inplanes, planes, stride, downsample))
-        self.prob_now = self.prob_now - self.prob_step
+        layers.append(block(prob_now, self.multFlag, self.inplanes, planes, stride, downsample))
+        prob_now = prob_now - self.prob_step
         self.inplanes = planes * block.expansion
         for _ in range(1, blocks):
-            layers.append(block(self.prob_now, self.multFlag, self.inplanes, planes))
-            self.prob_now = self.prob_now - self.prob_step
+            layers.append(block(prob_now, self.multFlag, self.inplanes, planes))
+            prob_now = prob_now - self.prob_step
 
-        return nn.Sequential(*layers)
+        return nn.Sequential(*layers), prob_now
 
-    def _make_task_layer(self, block, planes, blocks):
+    def _make_task_layer(self, prob_now, block, planes, blocks):
         layers = []
         self.inplanes = planes * block.expansion
         for _ in range(1, blocks):
-            layers.append(block(self.prob_now, self.multFlag, self.inplanes, planes))
-            self.prob_now = self.prob_now - self.prob_step
+            layers.append(block(prob_now, self.multFlag, self.inplanes, planes))
+            prob_now = prob_now - self.prob_step
 
-        return nn.Sequential(*layers)
+        return nn.Sequential(*layers), prob_now
 
-    def add_new_task(self, block, layers, num_classes):
-        layer3 = self._make_task_layer(block, 256, layers[2])
-        layer4 = self._make_layer(block, 512, layers[3], stride=2)
+    def add_new_task(self):
+        layer3, prob_now = self._make_task_layer(self.task_base_prob, self.block, 256, self.layers[2])
+        layer4, _ = self._make_layer(prob_now, self.block, 512, self.layers[3], stride=2)
         avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        fc = nn.Linear(512 * block.expansion, num_classes)
+        fc = nn.Linear(512 * self.block.expansion, self.num_classes)
 
+        # TODO: freeze previous layers
         task_head = TaskHead(layer3, layer4, avgpool, fc)
         self.task_heads.append(task_head)
 
@@ -354,3 +358,23 @@ if __name__ == '__main__':
 
     output = model(inp)
     # print(output)
+
+    def print_probs(layer):
+        for i in range(len(layer)):
+            print(layer[i].prob)
+
+    for layer_name in ['layer1', 'layer2']:
+        print(layer_name)
+        layer = getattr(model, layer_name)
+        print_probs(layer)
+    print('layer3')
+    print(model.downsample_block.prob)
+    print_probs(model.task_heads[0].layer3)
+    print('layer4')
+    print_probs(model.task_heads[0].layer4)
+
+    print('new task')
+    model.add_new_task()
+    print_probs(model.task_heads[1].layer3)
+    print('layer4')
+    print_probs(model.task_heads[1].layer4)

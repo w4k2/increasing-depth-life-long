@@ -1,4 +1,4 @@
-name: stochastic-depth
+name: concept-drift-evaluation
 channels:
     - pytorch
     - conda-forge

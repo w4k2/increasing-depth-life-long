@@ -68,7 +68,7 @@ def get_tinyimagenet_dataloaders(batch_size=128):
     #                            'n02226429', 'n02231487'], [0, 0, 1, 1, 2, 2]), batch_size=batch_size, shuffle=True, drop_last=True))
 
     dataloaders = list()
-    single_dataloder_repeats = 10
+    single_dataloder_repeats = 5
     for _ in range(3):
         for _ in range(single_dataloder_repeats):
             dataloaders.append(DataLoader(dataset=tiny_imagenet_dataset(

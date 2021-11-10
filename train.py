@@ -21,7 +21,7 @@ def main():
     crtierion = crtierion.to(device)
 
     # model = stochastic_depth_model.resnet18_StoDepth_lineardecay(num_classes=19)
-    model = stochastic_depth_modified.resnet18_StoDepth_lineardecay(num_classes=19)
+    model = stochastic_depth_modified.resnet101_StoDepth_lineardecay(num_classes=19)
     # model = torchvision.models.resnet18(num_classes=19)
     model = model.to(device)
 

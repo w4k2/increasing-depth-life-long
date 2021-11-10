@@ -1,9 +1,6 @@
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 import torch
-import random
-
-import custom_dropout
 
 __all__ = ['ResNet_StoDepth_lineardecay', 'resnet18_StoDepth_lineardecay', 'resnet34_StoDepth_lineardecay', 'resnet50_StoDepth_lineardecay', 'resnet101_StoDepth_lineardecay',
            'resnet152_StoDepth_lineardecay']
@@ -175,7 +172,7 @@ class StoDepth_Bottleneck(nn.Module):
 
 class ResNet_StoDepth_lineardecay(nn.Module):
 
-    def __init__(self, block, prob_0_L, multFlag, layers, layers_per_task=0.5, num_classes=1000, zero_init_residual=False, dropout_p=0.3):
+    def __init__(self, block, prob_0_L, multFlag, layers, num_classes=1000, zero_init_residual=False):
         super(ResNet_StoDepth_lineardecay, self).__init__()
         self.inplanes = 64
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
@@ -194,30 +191,6 @@ class ResNet_StoDepth_lineardecay(nn.Module):
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-
-        num_blocks = sum(layers)
-        use_layers = int(layers_per_task * num_blocks)
-        task_layers = [set(random.sample(list(range(num_blocks)), use_layers)) for _ in range(3)]
-        self.task_probs = []
-        for selected_layers in task_layers:
-            task_layer_probs = []
-            i = 0
-            for layer_name in ['layer1', 'layer2', 'layer3', 'layer4']:
-                layer = getattr(self, layer_name)
-                for j in range(len(layer)):
-                    if i in selected_layers:
-                        p = min(1.3 * layer[j].prob, 0.9)
-                    else:
-                        p = max(0.3 * layer[j].prob, 0.1)
-                    task_layer_probs.append(p)
-                    i += 1
-            self.task_probs.append(task_layer_probs)
-
-        self.dropout_p = dropout_p
-        dropout_bernouli = torch.distributions.bernoulli.Bernoulli(torch.Tensor([self.dropout_p]))
-        self.masks = dropout_bernouli.sample((3, 512,))
-        self.masks.requires_grad = False
-        self.dropout = custom_dropout.CustomDropout(self.masks[0], self.dropout_p)
         self.fc = nn.Linear(512 * block.expansion, num_classes)
 
         for m in self.modules():
@@ -239,6 +212,8 @@ class ResNet_StoDepth_lineardecay(nn.Module):
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
+        # print('self.inplanes= ', self.inplanes)
+        # print('planes = ', planes)
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
                 conv1x1(self.inplanes, planes * block.expansion, stride),
@@ -255,23 +230,6 @@ class ResNet_StoDepth_lineardecay(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def to(self, device):
-        super().to(device)
-        self.masks = self.masks.to(device)
-        return self
-
-    def activate_task(self, task_index):
-        i = 0
-        for layer_name in ['layer1', 'layer2', 'layer3', 'layer4']:
-            layer = getattr(self, layer_name)
-            for j in range(len(layer)):
-                prob = self.task_probs[task_index][i]
-                layer[j].prob = prob
-                layer[j].m = torch.distributions.bernoulli.Bernoulli(torch.Tensor([prob]))
-                i += 1
-
-        self.dropout.mask = self.masks[task_index]
-
     def forward(self, x):
         x = self.conv1(x)
         x = self.bn1(x)
@@ -281,11 +239,12 @@ class ResNet_StoDepth_lineardecay(nn.Module):
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
+        # print('layer 4 input shape = ', x.shape)
         x = self.layer4(x)
+        # print('layer 4 output shape = ', x.shape)
 
         x = self.avgpool(x)
         x = x.view(x.size(0), -1)
-        x = self.dropout(x)
         x = self.fc(x)
 
         return x

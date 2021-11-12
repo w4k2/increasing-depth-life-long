@@ -1,0 +1,16 @@
+(occ-ll) jkozal@hinton:~/Documents/PWr/stochastic_depth$ python train.py 
+Files already downloaded and verified
+Files already downloaded and verified
+loss = 0.0976 train_acc = 0.9167 test_acc = 0.8890: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [14:57<00:00, 44.86s/it]
+Files already downloaded and verified
+Files already downloaded and verified
+loss = 0.5272 train_acc = 0.7917 test_acc = 0.8473: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [17:14<00:00, 51.71s/it]
+Files already downloaded and verified
+Files already downloaded and verified
+loss = 0.2361 train_acc = 0.9583 test_acc = 0.8897: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [20:20<00:00, 61.04s/it]
+Files already downloaded and verified
+Files already downloaded and verified
+loss = 0.2239 train_acc = 0.9583 test_acc = 0.9040: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [23:31<00:00, 70.57s/it]
+Files already downloaded and verified
+Files already downloaded and verified
+loss = nan train_acc = 0.3333 test_acc = 0.3333: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [26:36<00:00, 79.81s/it]

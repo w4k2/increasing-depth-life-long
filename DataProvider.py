@@ -1,6 +1,6 @@
 from torch.utils.data import DataLoader, SubsetRandomSampler
 from Cifar10Dataset import *
-from CelebADataset import *
+# from CelebADataset import *
 from FashionMnistDataset import *
 from TinyImagenetDataset import *
 

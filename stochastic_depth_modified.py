@@ -229,9 +229,9 @@ class ResNet_StoDepth_lineardecay(nn.Module):
         # This improves the model by 0.2~0.3% according to https://arxiv.org/abs/1706.02677
         if zero_init_residual:
             for m in self.modules():
-                if isinstance(m, StoDepth_lineardecayBottleneck):
+                if isinstance(m, StoDepth_Bottleneck):
                     nn.init.constant_(m.bn3.weight, 0)
-                elif isinstance(m, StoDepth_lineardecayBasicBlock):
+                elif isinstance(m, StoDepth_BasicBlock):
                     nn.init.constant_(m.bn2.weight, 0)
 
     def _make_layer(self, prob_now, block, planes, blocks, stride=1):

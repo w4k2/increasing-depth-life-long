@@ -177,29 +177,52 @@ class Node(nn.Module):
         self.layer4 = layer4
         self.avgpool = avgpool
         self.fc = fc
+        self.all_children = []
+        self.current_child = None
 
     def forward(self, x):
         feature_maps = self.layer3(x)
-        x = self.layer4(feature_maps)
-
-        x = self.avgpool(x)
-        x = x.view(x.size(0), -1)
-        x = self.fc(x)
+        if self.current_child:
+            x, _ = self.current_child(feature_maps)
+        else:
+            x = self.layer4(feature_maps)
+            x = self.avgpool(x)
+            x = x.view(x.size(0), -1)
+            x = self.fc(x)
 
         return x, feature_maps
 
 
-class Tree(nn.Module):
-    def __init__(self) -> None:
-        super().__init__()
-        self.root = None
+# class Tree(nn.Module):
+#     def __init__(self) -> None:
+#         super().__init__()
+#         self.root = None
+
+
+def make_layer(inplanes, multFlag, prob_now, prob_step, block, planes, blocks, stride=1, use_downsample=True):
+    layers = []
+    if use_downsample:
+        downsample = None
+        if stride != 1 or inplanes != planes * block.expansion:
+            downsample = nn.Sequential(
+                conv1x1(inplanes, planes * block.expansion, stride),
+                nn.InstanceNorm2d(planes * block.expansion),
+            )
+        layers.append(block(prob_now, multFlag, inplanes, planes, stride, downsample))
+    prob_now = prob_now - prob_step
+    inplanes = planes * block.expansion
+    for _ in range(1, blocks):
+        layers.append(block(prob_now, multFlag, inplanes, planes))
+        prob_now = prob_now - prob_step
+
+    return nn.Sequential(*layers), inplanes, prob_now
 
 
 class ResNet_StoDepth(nn.Module):
 
-    def __init__(self, block, prob_begin, prob_end, multFlag, layers, num_classes=1000, zero_init_residual=False):
+    def __init__(self, block, prob_begin, prob_end, multFlag, layers, max_depth=5, num_classes=1000, zero_init_residual=False):
         super().__init__()
-        self.inplanes = 64
+        inplanes = 64
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
                                bias=False)
         self.bn1 = nn.InstanceNorm2d(64)
@@ -211,14 +234,15 @@ class ResNet_StoDepth(nn.Module):
         self.prob_delta = prob_begin - prob_end
         self.prob_step = self.prob_delta/(sum(layers)-1)
 
-        self.layer1, prob_now = self._make_layer(prob_now, block, 64, layers[0])
-        self.layer2, prob_now = self._make_layer(prob_now, block, 128, layers[1], stride=2)
+        self.layer1, inplanes, prob_now = make_layer(inplanes, multFlag, prob_now, self.prob_step, block, 64, layers[0])
+        self.layer2, inplanes, prob_now = make_layer(inplanes, multFlag, prob_now, self.prob_step, block, 128, layers[1], stride=2)
         downsample = nn.Sequential(
-            conv1x1(self.inplanes, 256 * block.expansion, stride=2),
+            conv1x1(inplanes, 256 * block.expansion, stride=2),
             nn.InstanceNorm2d(256 * block.expansion),
         )
-        self.downsample_block = block(prob_now, self.multFlag, self.inplanes, planes=256, stride=2, downsample=downsample)
+        self.downsample_block = block(prob_now, self.multFlag, inplanes, planes=256, stride=2, downsample=downsample)
         self.task_base_prob = prob_now - self.prob_step
+        self.task_inplanes = inplanes
 
         self.task_heads = nn.ModuleList([])
         self.block = block
@@ -240,27 +264,10 @@ class ResNet_StoDepth(nn.Module):
                 elif isinstance(m, StoDepth_BasicBlock):
                     nn.init.constant_(m.bn2.weight, 0)
 
-    def _make_layer(self, prob_now, block, planes, blocks, stride=1, use_downsample=True):
-        layers = []
-        if use_downsample:
-            downsample = None
-            if stride != 1 or self.inplanes != planes * block.expansion:
-                downsample = nn.Sequential(
-                    conv1x1(self.inplanes, planes * block.expansion, stride),
-                    nn.InstanceNorm2d(planes * block.expansion),
-                )
-            layers.append(block(prob_now, self.multFlag, self.inplanes, planes, stride, downsample))
-        prob_now = prob_now - self.prob_step
-        self.inplanes = planes * block.expansion
-        for _ in range(1, blocks):
-            layers.append(block(prob_now, self.multFlag, self.inplanes, planes))
-            prob_now = prob_now - self.prob_step
-
-        return nn.Sequential(*layers), prob_now
-
+    # TODO check multFlag evaluation
     def add_new_task(self, freeze_previous=True):
-        layer3, prob_now = self._make_layer(self.task_base_prob, self.block, 256, self.layers[2], use_downsample=False)
-        layer4, _ = self._make_layer(prob_now, self.block, 512, self.layers[3], stride=2)
+        layer3, inplanes, prob_now = make_layer(self.task_inplanes, self.multFlag, self.task_base_prob, self.prob_step, self.block, 256, self.layers[2], use_downsample=False)
+        layer4, _, _ = make_layer(inplanes, self.multFlag, prob_now, self.prob_step, self.block, 512, self.layers[3], stride=2)
         avgpool = nn.AdaptiveAvgPool2d((1, 1))
         fc = nn.Linear(512 * self.block.expansion, self.num_classes)
 

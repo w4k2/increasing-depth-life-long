@@ -192,8 +192,15 @@ def make_layer(inplanes, multFlag, prob_now, prob_step, block, planes, blocks, s
 class Node(nn.Module):
     def __init__(self, task_inplanes, multFlag, task_base_prob, prob_step, block, layers, num_classes):
         super().__init__()
+        self.task_inplanes = task_inplanes
+        self.multFlag = multFlag
+        self.prob_step = prob_step
+        self.block = block
+        self.layers = layers
+        self.num_classes = num_classes
         self.layer3, inplanes, prob_now = make_layer(task_inplanes, multFlag, task_base_prob, prob_step, block, 256, layers[2], use_downsample=False)
-        self.layer4, _, _ = make_layer(inplanes, multFlag, prob_now, prob_step, block, 512, layers[3], stride=2)
+        self.layer4, _, next_task_prob = make_layer(inplanes, multFlag, prob_now, prob_step, block, 512, layers[3], stride=2)
+        self.next_task_prob = next_task_prob
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * block.expansion, num_classes)
 
@@ -212,11 +219,11 @@ class Node(nn.Module):
 
         return x, feature_maps
 
-    def add_new_leaf(self, node):
+    def add_new_leaf(self):
         if self.current_child == None:
-            self.current_child = node
+            self.current_child = Node(self.task_inplanes, self.multFlag, self.next_task_prob, self.prob_step, self.block, self.layers, self.num_classes)
         else:
-            self.current_child.add_new_leaf(node)
+            self.current_child.add_new_leaf()
 
 # class Tree(nn.Module):
 #     def __init__(self) -> None:
@@ -226,7 +233,7 @@ class Node(nn.Module):
 
 class ResNet_StoDepth(nn.Module):
 
-    def __init__(self, block, prob_begin, prob_end, multFlag, layers, max_depth=5, num_classes=1000, zero_init_residual=False):
+    def __init__(self, block, prob_begin, prob_end, multFlag, layers, max_depth=100, num_classes=1000, zero_init_residual=False):
         super().__init__()
         inplanes = 64
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
@@ -237,8 +244,8 @@ class ResNet_StoDepth(nn.Module):
 
         self.multFlag = multFlag
         prob_now = prob_begin
-        self.prob_delta = prob_begin - prob_end
-        self.prob_step = self.prob_delta/(sum(layers)-1)
+        prob_delta = prob_begin - prob_end
+        self.prob_step = prob_delta / (sum(layers[:2]) + sum(layers[2:])*max_depth - 1)
 
         self.layer1, inplanes, prob_now = make_layer(inplanes, multFlag, prob_now, self.prob_step, block, 64, layers[0])
         self.layer2, inplanes, prob_now = make_layer(inplanes, multFlag, prob_now, self.prob_step, block, 128, layers[1], stride=2)
@@ -276,11 +283,10 @@ class ResNet_StoDepth(nn.Module):
             for param in self.parameters():
                 param.requires_grad = False
 
-        node = Node(self.task_inplanes, self.multFlag, self.task_base_prob, self.prob_step, self.block, self.layers, self.num_classes)
         if self.current_node == None:
-            self.current_node = node
+            self.current_node = Node(self.task_inplanes, self.multFlag, self.task_base_prob, self.prob_step, self.block, self.layers, self.num_classes)
         else:
-            self.current_node.add_new_leaf(node)
+            self.current_node.add_new_leaf()
 
     def forward(self, x):
         x = self.conv1(x)
@@ -384,6 +390,13 @@ if __name__ == '__main__':
     # print(model.state_dict())
 
     print('new task')
-    model.add_new_node()
+    for _ in range(100):
+        model.add_new_node()
     print_node_probs(model.current_node)
+
+    model = model.to('cuda')
+    inp = torch.randn(32, 3, 224, 224)
+    inp = inp.to('cuda')
+    output = model(inp)
+    print(output)
     # print(model.state_dict())

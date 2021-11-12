@@ -170,35 +170,6 @@ class StoDepth_Bottleneck(nn.Module):
         return out
 
 
-class Node(nn.Module):
-    def __init__(self, layer3, layer4, avgpool, fc):
-        super().__init__()
-        self.layer3 = layer3
-        self.layer4 = layer4
-        self.avgpool = avgpool
-        self.fc = fc
-        self.all_children = []
-        self.current_child = None
-
-    def forward(self, x):
-        feature_maps = self.layer3(x)
-        if self.current_child:
-            x, _ = self.current_child(feature_maps)
-        else:
-            x = self.layer4(feature_maps)
-            x = self.avgpool(x)
-            x = x.view(x.size(0), -1)
-            x = self.fc(x)
-
-        return x, feature_maps
-
-
-# class Tree(nn.Module):
-#     def __init__(self) -> None:
-#         super().__init__()
-#         self.root = None
-
-
 def make_layer(inplanes, multFlag, prob_now, prob_step, block, planes, blocks, stride=1, use_downsample=True):
     layers = []
     if use_downsample:
@@ -216,6 +187,41 @@ def make_layer(inplanes, multFlag, prob_now, prob_step, block, planes, blocks, s
         prob_now = prob_now - prob_step
 
     return nn.Sequential(*layers), inplanes, prob_now
+
+
+class Node(nn.Module):
+    def __init__(self, task_inplanes, multFlag, task_base_prob, prob_step, block, layers, num_classes):
+        super().__init__()
+        self.layer3, inplanes, prob_now = make_layer(task_inplanes, multFlag, task_base_prob, prob_step, block, 256, layers[2], use_downsample=False)
+        self.layer4, _, _ = make_layer(inplanes, multFlag, prob_now, prob_step, block, 512, layers[3], stride=2)
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = nn.Linear(512 * block.expansion, num_classes)
+
+        self.all_children = []
+        self.current_child = None
+
+    def forward(self, x):
+        feature_maps = self.layer3(x)
+        if self.current_child:
+            x, _ = self.current_child(feature_maps)
+        else:
+            x = self.layer4(feature_maps)
+            x = self.avgpool(x)
+            x = x.view(x.size(0), -1)
+            x = self.fc(x)
+
+        return x, feature_maps
+
+    def add_new_leaf(self, node):
+        if self.current_child == None:
+            self.current_child = node
+        else:
+            self.current_child.add_new_leaf(node)
+
+# class Tree(nn.Module):
+#     def __init__(self) -> None:
+#         super().__init__()
+#         self.root = None
 
 
 class ResNet_StoDepth(nn.Module):
@@ -244,11 +250,11 @@ class ResNet_StoDepth(nn.Module):
         self.task_base_prob = prob_now - self.prob_step
         self.task_inplanes = inplanes
 
-        self.task_heads = nn.ModuleList([])
         self.block = block
         self.layers = layers
         self.num_classes = num_classes
-        self.add_new_task(freeze_previous=False)
+        self.current_node = None
+        self.add_new_node(freeze_previous=False)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -265,18 +271,16 @@ class ResNet_StoDepth(nn.Module):
                     nn.init.constant_(m.bn2.weight, 0)
 
     # TODO check multFlag evaluation
-    def add_new_task(self, freeze_previous=True):
-        layer3, inplanes, prob_now = make_layer(self.task_inplanes, self.multFlag, self.task_base_prob, self.prob_step, self.block, 256, self.layers[2], use_downsample=False)
-        layer4, _, _ = make_layer(inplanes, self.multFlag, prob_now, self.prob_step, self.block, 512, self.layers[3], stride=2)
-        avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        fc = nn.Linear(512 * self.block.expansion, self.num_classes)
-
+    def add_new_node(self, freeze_previous=True):
         if freeze_previous:
             for param in self.parameters():
                 param.requires_grad = False
 
-        task_head = Node(layer3, layer4, avgpool, fc)
-        self.task_heads.append(task_head)
+        node = Node(self.task_inplanes, self.multFlag, self.task_base_prob, self.prob_step, self.block, self.layers, self.num_classes)
+        if self.current_node == None:
+            self.current_node = node
+        else:
+            self.current_node.add_new_leaf(node)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -287,9 +291,8 @@ class ResNet_StoDepth(nn.Module):
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.downsample_block(x)
-        feature_maps = x
-        for task_head in self.task_heads:
-            pred, feature_maps = task_head(feature_maps)
+
+        pred, _ = self.current_node(x)
 
         return pred
 
@@ -366,16 +369,21 @@ if __name__ == '__main__':
         print(layer_name)
         layer = getattr(model, layer_name)
         print_probs(layer)
-    print('layer3')
+    print('downsample')
     print(model.downsample_block.prob)
-    print_probs(model.task_heads[0].layer3)
-    print('layer4')
-    print_probs(model.task_heads[0].layer4)
+
+    def print_node_probs(node):
+        print('layer 3')
+        print_probs(node.layer3)
+        print('layer 4')
+        print_probs(node.layer4)
+        if node.current_child is not None:
+            print_node_probs(node.current_child)
+
+    print_node_probs(model.current_node)
     # print(model.state_dict())
 
     print('new task')
-    model.add_new_task()
-    print_probs(model.task_heads[1].layer3)
-    print('layer4')
-    print_probs(model.task_heads[1].layer4)
+    model.add_new_node()
+    print_node_probs(model.current_node)
     # print(model.state_dict())

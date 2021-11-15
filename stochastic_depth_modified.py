@@ -221,14 +221,20 @@ class Node(nn.Module):
 
     def add_new_leaf(self):
         if self.current_child == None:
-            self.current_child = Node(self.task_inplanes, self.multFlag, self.next_task_prob, self.prob_step, self.block, self.layers, self.num_classes)
+            node = Node(self.task_inplanes, self.multFlag, self.next_task_prob, self.prob_step, self.block, self.layers, self.num_classes)
+            self.current_child = node
+            self.all_children.append(node)
         else:
             self.current_child.add_new_leaf()
 
-# class Tree(nn.Module):
-#     def __init__(self) -> None:
-#         super().__init__()
-#         self.root = None
+    def get_all_paths(self):
+        all_paths = []
+        for i, node in enumerate(self.all_children):
+            all_paths.append([i])
+            children_paths = node.get_all_paths()
+            for path in children_paths:
+                all_paths.append([i] + path)
+        return all_paths
 
 
 class ResNet_StoDepth(nn.Module):
@@ -260,6 +266,8 @@ class ResNet_StoDepth(nn.Module):
         self.block = block
         self.layers = layers
         self.num_classes = num_classes
+
+        self.nodes = []
         self.current_node = None
         self.add_new_node(freeze_previous=False)
 
@@ -284,9 +292,40 @@ class ResNet_StoDepth(nn.Module):
                 param.requires_grad = False
 
         if self.current_node == None:
-            self.current_node = Node(self.task_inplanes, self.multFlag, self.task_base_prob, self.prob_step, self.block, self.layers, self.num_classes)
+            node = Node(self.task_inplanes, self.multFlag, self.task_base_prob, self.prob_step, self.block, self.layers, self.num_classes)
+            self.current_node = node
+            self.nodes.append(node)
         else:
             self.current_node.add_new_leaf()
+
+    def select_most_similar_task(self, dataloder, threshold=0.5):
+        all_paths = self.get_all_paths()
+        min_entropy = 1.0
+        min_entropy_path = -[]
+
+        for path in all_paths:
+            self._set_path(path)
+
+            # compute entropy with dataloder
+            entropy = 0.5
+
+            if entropy < min_entropy:
+                min_entropy = entropy
+                min_entropy_path = path
+
+        if min_entropy >= threshold:
+            min_entropy_path = []
+        self._set_path(min_entropy_path)
+        return min_entropy_path
+
+    def get_all_paths(self):
+        all_paths = []
+        for i, node in enumerate(self.nodes):
+            all_paths.append([i])
+            node_paths = node.get_all_paths()
+            for path in node_paths:
+                all_paths.append([i] + path)
+        return all_paths
 
     def forward(self, x):
         x = self.conv1(x)

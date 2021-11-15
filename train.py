@@ -91,7 +91,7 @@ def train(model, train_dataloder, test_dataloader, lr: float = 0.001, n_epochs: 
                 pbar_update += 'train_acc = {:.4f} test_acc = {:.4f}'.format(train_acc, test_acc)
             pbar.set_description(pbar_update)
 
-            # break
+            break
 
         loss_values.append(loss_value)
         if test_dataloader is not None:
@@ -119,7 +119,7 @@ def evaluate(model, test_dataloder, device: str = 'cuda'):
             y_pred = torch.argmax(torch.softmax(y_pred, dim=1), dim=1)
             all_labels.append(labels)
             all_preds.append(y_pred)
-            # break
+            break
 
     all_labels = torch.concat(all_labels).cpu().numpy()
     all_preds = torch.concat(all_preds).cpu().numpy()

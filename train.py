@@ -35,7 +35,7 @@ def main():
         test_dataloader = get_dataloder(args, task_classes, train=False, shuffle=False, flip=False)
         model, results = train(model, train_dataloder, test_dataloader, lr=lr, n_epochs=args.n_epochs,
                                lr_milestones=lr_milestones, weight_decay=weight_decay, device=device, num_layers=args.num_layers)
-        model.add_new_task()
+        model.add_new_node()
         plot_metrics(results)
 
     plt.show()

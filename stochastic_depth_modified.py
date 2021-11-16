@@ -219,13 +219,13 @@ class Node(nn.Module):
 
         return x, feature_maps
 
-    def add_new_leaf(self):
-        if self.current_child == None:
+    def add_new_leaf(self, path):
+        if self.current_child == None or len(path) == 0:
             node = Node(self.task_inplanes, self.multFlag, self.next_task_prob, self.prob_step, self.block, self.layers, self.num_classes)
             self.current_child = node
             self.all_children.append(node)
         else:
-            self.current_child.add_new_leaf()
+            self.current_child.add_new_leaf(path[1:])
 
     def get_all_paths(self):
         all_paths = []
@@ -235,6 +235,11 @@ class Node(nn.Module):
             for path in children_paths:
                 all_paths.append([i] + path)
         return all_paths
+
+    def set_path(self, path):
+        if len(path) > 0:
+            self.current_child = self.all_children[path[0]]
+            self.current_child.set_path(path[1:])
 
 
 class ResNet_StoDepth(nn.Module):
@@ -269,7 +274,7 @@ class ResNet_StoDepth(nn.Module):
 
         self.nodes = []
         self.current_node = None
-        self.add_new_node(freeze_previous=False)
+        self.add_new_node([], freeze_previous=False)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -286,36 +291,44 @@ class ResNet_StoDepth(nn.Module):
                     nn.init.constant_(m.bn2.weight, 0)
 
     # TODO check multFlag evaluation
-    def add_new_node(self, freeze_previous=True):
+    def add_new_node(self, path, freeze_previous=True):
         if freeze_previous:
             for param in self.parameters():
                 param.requires_grad = False
 
-        if self.current_node == None:
+        if self.current_node == None or len(path) == 0:
             node = Node(self.task_inplanes, self.multFlag, self.task_base_prob, self.prob_step, self.block, self.layers, self.num_classes)
             self.current_node = node
             self.nodes.append(node)
         else:
-            self.current_node.add_new_leaf()
+            self.set_path(path)
+            self.current_node.add_new_leaf(path[1:])
 
-    def select_most_similar_task(self, dataloder, threshold=0.5):
+    def select_most_similar_task(self, dataloder, device='cuda', threshold=0.5):
         all_paths = self.get_all_paths()
         min_entropy = 1.0
-        min_entropy_path = -[]
+        min_entropy_path = []
 
         for path in all_paths:
-            self._set_path(path)
+            self.set_path(path)
+            self.to(device)
+            avrg_entropy = []
+            with torch.no_grad():
+                for inp, _ in dataloder:
+                    inp = inp.to(device)
+                    y_pred = self.forward(inp)
+                    y_pred = torch.softmax(y_pred, dim=1)
+                    entropy = self.entropy(y_pred)
+                    avrg_entropy.append(entropy)
+                    break
+            avrg_entropy = torch.mean(torch.cat(avrg_entropy)).item()
 
-            # compute entropy with dataloder
-            entropy = 0.5
-
-            if entropy < min_entropy:
-                min_entropy = entropy
+            if avrg_entropy < min_entropy:
+                min_entropy = avrg_entropy
                 min_entropy_path = path
 
         if min_entropy >= threshold:
             min_entropy_path = []
-        self._set_path(min_entropy_path)
         return min_entropy_path
 
     def get_all_paths(self):
@@ -326,6 +339,15 @@ class ResNet_StoDepth(nn.Module):
             for path in node_paths:
                 all_paths.append([i] + path)
         return all_paths
+
+    def entropy(self, p):
+        log_p = torch.log2(p)
+        entropy = - torch.sum(log_p * p, dim=1)
+        return entropy
+
+    def set_path(self, path):
+        self.current_node = self.nodes[path[0]]
+        self.current_node.set_path(path[1:])
 
     def forward(self, x):
         x = self.conv1(x)

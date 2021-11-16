@@ -30,14 +30,17 @@ def main():
 
     tasks = [(0, 1, 2), (3, 4, 0), (5, 6, 0), (7, 8, 0), (9, 1, 0)]
 
-    for _, task_classes in enumerate(tasks):
+    for i, task_classes in enumerate(tasks):
         train_dataloder = get_dataloder(args, task_classes, train=True, shuffle=True, flip=False)
         test_dataloader = get_dataloder(args, task_classes, train=False, shuffle=False, flip=False)
+        if i > 0:
+            path = model.select_most_similar_task(train_dataloder)
+            print('min entropy path = ', path)
+            model.add_new_node(path)
+
         model, results = train(model, train_dataloder, test_dataloader, lr=lr, n_epochs=args.n_epochs,
                                lr_milestones=lr_milestones, weight_decay=weight_decay, device=device, num_layers=args.num_layers)
-        model.add_new_node()
         plot_metrics(results)
-
     plt.show()
 
 

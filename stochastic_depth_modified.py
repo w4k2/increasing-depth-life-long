@@ -320,13 +320,14 @@ class ResNet_StoDepth(nn.Module):
                     y_pred = torch.softmax(y_pred, dim=1)
                     entropy = self.entropy(y_pred)
                     avrg_entropy.append(entropy)
-                    break
+                    # break
             avrg_entropy = torch.mean(torch.cat(avrg_entropy)).item()
 
             if avrg_entropy < min_entropy:
                 min_entropy = avrg_entropy
                 min_entropy_path = path
 
+        print('min entropy = ', min_entropy)
         if min_entropy >= threshold:
             min_entropy_path = []
         return min_entropy_path

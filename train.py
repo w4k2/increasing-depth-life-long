@@ -39,7 +39,7 @@ def main():
             model.add_new_node(path)
 
         model, results = train(model, train_dataloder, test_dataloader, lr=lr, n_epochs=args.n_epochs,
-                               lr_milestones=lr_milestones, weight_decay=weight_decay, device=device, num_layers=args.num_layers)
+                               lr_milestones=lr_milestones, weight_decay=weight_decay, device=device)
         plot_metrics(results)
     plt.show()
 
@@ -49,17 +49,16 @@ def parse_args():
 
     parser.add_argument('--device', default='cuda', type=str)
     parser.add_argument('--batch_size', default=128, type=int)
-    parser.add_argument('--num_workers', default=10, type=int)
+    parser.add_argument('--num_workers', default=20, type=int)
     parser.add_argument('--seed', default=None, type=int)
     parser.add_argument('--n_epochs', default=20, type=int)
-    parser.add_argument('--num_layers', default=1, type=int)
 
     args = parser.parse_args()
     return args
 
 
 def train(model, train_dataloder, test_dataloader, lr: float = 0.001, n_epochs: int = 150,
-          lr_milestones: tuple = (), weight_decay: float = 1e-6, device: str = 'cuda', num_layers=1):
+          lr_milestones: tuple = (), weight_decay: float = 1e-6, device: str = 'cuda'):
     model = model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, amsgrad=False)
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=lr_milestones, gamma=0.1)
@@ -94,7 +93,7 @@ def train(model, train_dataloder, test_dataloader, lr: float = 0.001, n_epochs: 
                 pbar_update += 'train_acc = {:.4f} test_acc = {:.4f}'.format(train_acc, test_acc)
             pbar.set_description(pbar_update)
 
-            break
+            # break
 
         loss_values.append(loss_value)
         if test_dataloader is not None:
@@ -122,7 +121,7 @@ def evaluate(model, test_dataloder, device: str = 'cuda'):
             y_pred = torch.argmax(torch.softmax(y_pred, dim=1), dim=1)
             all_labels.append(labels)
             all_preds.append(y_pred)
-            break
+            # break
 
     all_labels = torch.concat(all_labels).cpu().numpy()
     all_preds = torch.concat(all_preds).cpu().numpy()

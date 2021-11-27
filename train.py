@@ -28,18 +28,20 @@ def main():
     model = stochastic_depth_modified.resnet50_StoDepth_lineardecay(num_classes=3)
     # model = torchvision.models.resnet18(num_classes=19)
 
-    tasks = [(0, 1, 2), (3, 4, 0), (5, 6, 0), (7, 8, 0), (9, 1, 0)]
+    tasks = [(0, 1, 3), (0, 1, 3), (0, 1, 3), (8, 9, 5), (2, 4, 6)]
 
     for i, task_classes in enumerate(tasks):
+        print('task_classes = ', task_classes)
         train_dataloder = get_dataloder(args, task_classes, train=True, shuffle=True, flip=False)
         test_dataloader = get_dataloder(args, task_classes, train=False, shuffle=False, flip=False)
         if i > 0:
-            path = model.select_most_similar_task(train_dataloder)
+            path = model.select_most_similar_task(train_dataloder, num_classes=3)
             print('min entropy path = ', path)
             model.add_new_node(path)
 
         model, results = train(model, train_dataloder, test_dataloader, lr=lr, n_epochs=args.n_epochs,
                                lr_milestones=lr_milestones, weight_decay=weight_decay, device=device)
+        torch.save(model, f'stoch_depth_task_{i}.pth')
         plot_metrics(results)
     plt.show()
 

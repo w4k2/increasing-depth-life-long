@@ -304,14 +304,16 @@ class ResNet_StoDepth(nn.Module):
             self.set_path(path)
             self.current_node.add_new_leaf(path[1:])
 
-    def select_most_similar_task(self, dataloder, device='cuda', threshold=0.5):
+    def select_most_similar_task(self, dataloder, num_classes, device='cuda', threshold=0.5):
         all_paths = self.get_all_paths()
-        min_entropy = 1.0
+        min_entropy_raio = 1.0
         min_entropy_path = []
+        max_entropy = self.entropy(torch.Tensor([[1.0/num_classes for _ in range(num_classes)]]))
 
         for path in all_paths:
             self.set_path(path)
             self.to(device)
+            self.eval()
             avrg_entropy = []
             with torch.no_grad():
                 for inp, _ in dataloder:
@@ -322,13 +324,15 @@ class ResNet_StoDepth(nn.Module):
                     avrg_entropy.append(entropy)
                     # break
             avrg_entropy = torch.mean(torch.cat(avrg_entropy)).item()
+            entropy_ratio = avrg_entropy / max_entropy
+            print(f'path = {path}, entropy_ratio = {entropy_ratio}')
 
-            if avrg_entropy < min_entropy:
-                min_entropy = avrg_entropy
+            if entropy_ratio <= min_entropy_raio:
+                min_entropy_raio = entropy_ratio
                 min_entropy_path = path
 
-        print('min entropy = ', min_entropy)
-        if min_entropy >= threshold:
+        print('min entropy ratio = ', min_entropy_raio)
+        if min_entropy_raio >= threshold:
             min_entropy_path = []
         return min_entropy_path
 
@@ -341,7 +345,8 @@ class ResNet_StoDepth(nn.Module):
                 all_paths.append([i] + path)
         return all_paths
 
-    def entropy(self, p):
+    @staticmethod
+    def entropy(p):
         log_p = torch.log2(p)
         entropy = - torch.sum(log_p * p, dim=1)
         return entropy

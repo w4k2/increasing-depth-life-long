@@ -272,7 +272,7 @@ class ResNet_StoDepth(nn.Module):
         self.layers = layers
         self.num_classes = num_classes
 
-        self.nodes = []
+        self.nodes = nn.ModuleList([])
         self.current_node = None
         self.add_new_node([], freeze_previous=False)
 

@@ -34,14 +34,14 @@ def main():
         print('task_classes = ', task_classes)
         train_dataloder = get_dataloder(args, task_classes, train=True, shuffle=True, flip=False)
         test_dataloader = get_dataloder(args, task_classes, train=False, shuffle=False, flip=False)
-        if i > 0:
-            path = model.select_most_similar_task(train_dataloder, num_classes=3)
-            print('min entropy path = ', path)
-            model.add_new_node(path)
+        # if i > 0:
+        #     path = model.select_most_similar_task(train_dataloder, num_classes=3)
+        #     print('min entropy path = ', path)
+        #     model.add_new_node(path)
 
         model, results = train(model, train_dataloder, test_dataloader, lr=lr, n_epochs=args.n_epochs,
                                lr_milestones=lr_milestones, weight_decay=weight_decay, device=device)
-        torch.save(model, f'stoch_depth_task_{i}.pth')
+        # torch.save(model, f'stoch_depth_task_{i}.pth')
         plot_metrics(results)
     plt.show()
 

@@ -64,3 +64,159 @@ Files already downloaded and verified
 min entropy =  0.15685413777828217
 min entropy path =  [0, 0]
 loss = 0.2180 train_acc = 0.9583 test_acc = 0.9007: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [23:25<00:00, 70.28s/it]
+
+
+task_classes =  (0, 1, 3)
+Files already downloaded and verified
+Files already downloaded and verified
+loss = 0.0047 train_acc = 0.9583 test_acc = 0.9040: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [17:48<00:00, 53.45s/it]
+task_classes =  (8, 9, 5)
+Files already downloaded and verified
+Files already downloaded and verified
+min entropy =  0.29912877082824707
+min entropy path =  [0]
+loss = 0.0335 train_acc = 0.9583 test_acc = 0.9160: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [20:12<00:00, 60.62s/it]
+task_classes =  (2, 4, 6)
+Files already downloaded and verified
+Files already downloaded and verified
+min entropy =  0.30362480878829956
+min entropy path =  [0]
+loss = 0.0489 train_acc = 1.0000 test_acc = 0.8367: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [20:18<00:00, 60.94s/it]
+
+
+(occ-ll) jkozal@hinton:~/Documents/PWr/stochastic_depth$ python train.py --n_epochs=20
+task_classes =  (0, 1, 3)
+Files already downloaded and verified
+Files already downloaded and verified
+loss = 0.0049 train_acc = 1.0000 test_acc = 0.9123: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [17:58<00:00, 53.91s/it]
+task_classes =  (8, 9, 5)
+Files already downloaded and verified
+Files already downloaded and verified
+min entropy ratio =  tensor([0.1588])
+min entropy path =  [0]
+loss = 0.0017 train_acc = 1.0000 test_acc = 0.9270: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [20:32<00:00, 61.61s/it]
+task_classes =  (2, 4, 6)
+Files already downloaded and verified
+Files already downloaded and verified
+min entropy ratio =  tensor([0.1735])
+min entropy path =  [0]
+loss = 0.4902 train_acc = 1.0000 test_acc = 0.8157: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [20:35<00:00, 61.75s/it]
+
+
+task_classes =  (0, 1, 3)
+Files already downloaded and verified
+Files already downloaded and verified
+loss = 0.2103 train_acc = 1.0000 test_acc = 0.9110: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [18:05<00:00, 54.29s/it]
+task_classes =  (0, 1, 3)
+Files already downloaded and verified
+Files already downloaded and verified
+path = [0], entropy_ratio = tensor([0.0199])
+min entropy ratio =  tensor([0.0199])
+min entropy path =  [0]
+loss = 0.0432 train_acc = 1.0000 test_acc = 0.9023: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [20:25<00:00, 61.28s/it]
+task_classes =  (0, 1, 3)
+Files already downloaded and verified
+Files already downloaded and verified
+path = [0], entropy_ratio = tensor([0.0428])
+path = [0, 0], entropy_ratio = tensor([0.0428])
+min entropy ratio =  tensor([0.0428])
+min entropy path =  [0, 0]
+loss = 0.0008 train_acc = 1.0000 test_acc = 0.9047: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [23:34<00:00, 70.73s/it]
+task_classes =  (8, 9, 5)
+Files already downloaded and verified
+Files already downloaded and verified
+path = [0], entropy_ratio = tensor([0.1352])
+path = [0, 0], entropy_ratio = tensor([0.1352])
+path = [0, 0, 0], entropy_ratio = tensor([0.1352])
+min entropy ratio =  tensor([0.1352])
+min entropy path =  [0, 0, 0]
+loss = 0.0004 train_acc = 1.0000 test_acc = 0.9320: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [26:42<00:00, 80.14s/it]
+task_classes =  (2, 4, 6)
+Files already downloaded and verified
+Files already downloaded and verified
+path = [0], entropy_ratio = tensor([0.0988])
+path = [0, 0], entropy_ratio = tensor([0.0988])
+path = [0, 0, 0], entropy_ratio = tensor([0.0988])
+path = [0, 0, 0, 0], entropy_ratio = tensor([0.0988])
+min entropy ratio =  tensor([0.0988])
+min entropy path =  [0]
+loss = 0.0340 train_acc = 0.9167 test_acc = 0.8363: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [20:31<00:00, 61.60s/it]
+
+task_classes =  (0, 1, 3)
+Files already downloaded and verified
+Files already downloaded and verified
+loss = 0.0074 train_acc = 1.0000 test_acc = 0.9023: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [18:04<00:00, 54.25s/it]
+task_classes =  (0, 1, 3)
+Files already downloaded and verified
+Files already downloaded and verified
+path = [0], entropy_ratio = tensor([0.0280])
+min entropy ratio =  tensor([0.0280])
+min entropy path =  [0]
+loss = 0.1106 train_acc = 1.0000 test_acc = 0.9140: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [20:25<00:00, 61.28s/it]
+task_classes =  (0, 1, 3)
+Files already downloaded and verified
+Files already downloaded and verified
+path = [0], entropy_ratio = tensor([0.0460])
+path = [0, 0], entropy_ratio = tensor([0.0460])
+min entropy ratio =  tensor([0.0460])
+min entropy path =  [0]
+loss = 0.0006 train_acc = 1.0000 test_acc = 0.9243: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [20:26<00:00, 61.33s/it]
+task_classes =  (8, 9, 5)
+Files already downloaded and verified
+Files already downloaded and verified
+path = [0], entropy_ratio = tensor([0.1358])
+path = [0, 0], entropy_ratio = tensor([0.1441])
+path = [0, 1], entropy_ratio = tensor([0.1358])
+min entropy ratio =  tensor([0.1358])
+min entropy path =  [0]
+loss = 0.0031 train_acc = 1.0000 test_acc = 0.9207: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [20:27<00:00, 61.36s/it]
+task_classes =  (2, 4, 6)
+Files already downloaded and verified
+Files already downloaded and verified
+path = [0], entropy_ratio = tensor([0.1280])
+path = [0, 0], entropy_ratio = tensor([0.1457])
+path = [0, 1], entropy_ratio = tensor([0.1452])
+path = [0, 2], entropy_ratio = tensor([0.1280])
+min entropy ratio =  tensor([0.1280])
+min entropy path =  [0]
+loss = 0.4988 train_acc = 0.9167 test_acc = 0.8290: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [20:30<00:00, 61.52s/it]
+
+
+task_classes =  (0, 1, 3)
+Files already downloaded and verified
+Files already downloaded and verified
+loss = 0.0038 train_acc = 0.8333 test_acc = 0.8823: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [17:46<00:00, 53.35s/it]
+task_classes =  (0, 1, 3)
+Files already downloaded and verified
+Files already downloaded and verified
+path = [0], entropy_ratio = tensor([0.0442])
+min entropy ratio =  tensor([0.0442])
+min entropy path =  [0]
+loss = 0.0015 train_acc = 0.9583 test_acc = 0.9110: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [20:08<00:00, 60.41s/it]
+task_classes =  (0, 1, 3)
+Files already downloaded and verified
+Files already downloaded and verified
+path = [0], entropy_ratio = tensor([0.0352])
+path = [0, 0], entropy_ratio = tensor([0.0352])
+min entropy ratio =  tensor([0.0352])
+min entropy path =  [0]
+loss = 0.0386 train_acc = 1.0000 test_acc = 0.9203: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [20:07<00:00, 60.39s/it]
+task_classes =  (8, 9, 5)
+Files already downloaded and verified
+Files already downloaded and verified
+path = [0], entropy_ratio = tensor([0.1721])
+path = [0, 0], entropy_ratio = tensor([0.1634])
+path = [0, 1], entropy_ratio = tensor([0.1721])
+min entropy ratio =  tensor([0.1634])
+min entropy path =  [0, 0]
+loss = 0.0852 train_acc = 1.0000 test_acc = 0.9047: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [23:20<00:00, 70.04s/it]
+task_classes =  (2, 4, 6)
+Files already downloaded and verified
+Files already downloaded and verified
+path = [0], entropy_ratio = tensor([0.1300])
+path = [0, 0], entropy_ratio = tensor([0.1300])
+path = [0, 0, 0], entropy_ratio = tensor([0.1300])
+path = [0, 1], entropy_ratio = tensor([0.1395])
+min entropy ratio =  tensor([0.1300])
+min entropy path =  [0]
+loss = 0.0310 train_acc = 1.0000 test_acc = 0.8467: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [20:15<00:00, 60.76s/it]

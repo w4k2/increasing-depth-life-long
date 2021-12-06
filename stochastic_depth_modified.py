@@ -245,8 +245,17 @@ class Node(nn.Module):
         else:
             self.current_child = None
 
+    def get_current_path(self):
+        current_path = []
+        for i, node in enumerate(self.all_children):
+            if self.current_child == node:
+                current_path.append(i)
+        if self.current_child:
+            current_path.extend(self.current_child.get_current_path())
+        return current_path
 
-class ResNet_StoDepth(avalanche.models.DynamicModule):
+
+class ResNet_StoDepth(nn.Module):
 
     def __init__(self, block, prob_begin, prob_end, multFlag, layers, max_depth=100, num_classes=1000, input_channels=3, zero_init_residual=False):
         super().__init__()
@@ -299,6 +308,7 @@ class ResNet_StoDepth(avalanche.models.DynamicModule):
         if freeze_previous:
             for param in self.parameters():
                 param.requires_grad = False
+                param.grad = None
 
         if self.current_node == None or len(path) == 0:
             node = Node(self.task_inplanes, self.multFlag, self.task_base_prob, self.prob_step, self.block, self.layers, self.num_classes)
@@ -359,8 +369,15 @@ class ResNet_StoDepth(avalanche.models.DynamicModule):
         self.current_node = self.nodes[path[0]]
         self.current_node.set_path(path[1:])
 
-    def eval_adaptation(self, dataset):
-        pass
+    def get_current_path(self):
+        current_path = []
+        for i, node in enumerate(self.nodes):
+            if self.current_node == node:
+                current_path.append(i)
+        if len(current_path) == 0:
+            raise ValueError("Current node not found")
+        current_path.extend(self.current_node.get_current_path())
+        return current_path
 
     def forward(self, x):
         x = self.conv1(x)

@@ -4,6 +4,7 @@ import torch.optim as optim
 import matplotlib.pyplot as plt
 import tqdm
 import itertools
+import torchvision
 import argparse
 
 import stochastic_depth_model
@@ -25,20 +26,20 @@ def main():
 
     # model = stochastic_depth_model.resnet18_StoDepth_lineardecay(num_classes=19)
     # model = stochastic_depth_modified.resnet101_StoDepth_lineardecay(num_classes=19)
-    # model = stochastic_depth_modified.resnet50_StoDepth_lineardecay(num_classes=3)
+    model = stochastic_depth_modified.resnet50_StoDepth_lineardecay(num_classes=10)
     # model = torchvision.models.resnet18(num_classes=19)
 
-    tasks = [(0, 1, 3), (0, 1, 3), (0, 1, 3), (8, 9, 5), (2, 4, 6)]
+    tasks = [list(i for i in range(j, j+10)) for j in range(0, 100, 10)]  # [(0, 1, 3), (0, 1, 3), (0, 1, 3), (8, 9, 5), (2, 4, 6)]
 
     for i, task_classes in enumerate(tasks):
-        model = stochastic_depth_model.resnet50_StoDepth_lineardecay(num_classes=3)
+        # model = stochastic_depth_model.resnet50_StoDepth_lineardecay(num_classes=10)
         print('task_classes = ', task_classes)
         train_dataloder = get_dataloder(args, task_classes, train=True, shuffle=True, flip=False)
         test_dataloader = get_dataloder(args, task_classes, train=False, shuffle=False, flip=False)
-        # if i > 0:
-        #     path = model.select_most_similar_task(train_dataloder, num_classes=3)
-        #     print('min entropy path = ', path)
-        #     model.add_new_node(path)
+        if i > 0:
+            path = model.select_most_similar_task(train_dataloder, num_classes=10)
+            print('min entropy path = ', path)
+            model.add_new_node(path)
 
         model, results = train(model, train_dataloder, test_dataloader, lr=lr, n_epochs=args.n_epochs,
                                lr_milestones=lr_milestones, weight_decay=weight_decay, device=device)
@@ -81,6 +82,10 @@ def train(model, train_dataloder, test_dataloader, lr: float = 0.001, n_epochs: 
     for epoch in pbar:
         model.train()
         for inputs, labels in train_dataloder:
+            grid_img = torchvision.utils.make_grid(inputs[:25], nrow=5)
+            plt.imshow(grid_img.permute(1, 2, 0))
+            plt.show()
+            exit()
             inputs = inputs.to(device)
             labels = labels.to(device)
             optimizer.zero_grad()

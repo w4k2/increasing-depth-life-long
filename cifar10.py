@@ -20,6 +20,22 @@ def get_cifar10(train=True, use_horizontal_flip=False, target_transform=None):
     return cifar_dataset
 
 
+def get_cifar100(train=True, use_horizontal_flip=False, target_transform=None):
+
+    transforms_list = [
+        torchvision.transforms.Resize((224, 224)),
+        torchvision.transforms.ToTensor(),
+        # torchvision.transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761))
+    ]
+    if use_horizontal_flip:
+        transforms_list.insert(0, torchvision.transforms.RandomHorizontalFlip(p=0.5))
+
+    transforms = torchvision.transforms.Compose(transforms_list)
+
+    cifar_dataset = torchvision.datasets.CIFAR100(root='../repo/data', download=True, train=train, transform=transforms, target_transform=target_transform)
+    return cifar_dataset
+
+
 def select_classes(dataset, class_idx):
     if type(class_idx) == int:
         class_idx = [class_idx]
@@ -35,7 +51,8 @@ def select_classes(dataset, class_idx):
 
 def get_dataloder(args, task_classes, train=True, shuffle=False, flip=False):
     labels_mapping = {class_idx: i for i, class_idx in enumerate(task_classes)}
-    dataset = get_cifar10(train=train, use_horizontal_flip=flip, target_transform=torchvision.transforms.Lambda(lambda l: labels_mapping[l]))
+    # dataset = get_cifar10(train=train, use_horizontal_flip=flip, target_transform=torchvision.transforms.Lambda(lambda l: labels_mapping[l]))
+    dataset = get_cifar100(train=train, use_horizontal_flip=flip, target_transform=torchvision.transforms.Lambda(lambda l: labels_mapping[l]))
     dataset = select_classes(dataset, task_classes)
     dataloder = torch.utils.data.DataLoader(dataset,
                                             batch_size=args.batch_size,

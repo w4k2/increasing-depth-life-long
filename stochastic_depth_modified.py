@@ -2,6 +2,8 @@ import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 import torch
 
+import avalanche.models
+
 __all__ = ['ResNet_StoDepth', 'resnet18_StoDepth_lineardecay', 'resnet34_StoDepth_lineardecay', 'resnet50_StoDepth_lineardecay', 'resnet101_StoDepth_lineardecay',
            'resnet152_StoDepth_lineardecay']
 
@@ -240,14 +242,16 @@ class Node(nn.Module):
         if len(path) > 0:
             self.current_child = self.all_children[path[0]]
             self.current_child.set_path(path[1:])
+        else:
+            self.current_child = None
 
 
-class ResNet_StoDepth(nn.Module):
+class ResNet_StoDepth(avalanche.models.DynamicModule):
 
-    def __init__(self, block, prob_begin, prob_end, multFlag, layers, max_depth=100, num_classes=1000, zero_init_residual=False):
+    def __init__(self, block, prob_begin, prob_end, multFlag, layers, max_depth=100, num_classes=1000, input_channels=3, zero_init_residual=False):
         super().__init__()
         inplanes = 64
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
+        self.conv1 = nn.Conv2d(input_channels, 64, kernel_size=7, stride=2, padding=3,
                                bias=False)
         self.bn1 = nn.InstanceNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
@@ -316,7 +320,7 @@ class ResNet_StoDepth(nn.Module):
             self.eval()
             avrg_entropy = []
             with torch.no_grad():
-                for inp, _ in dataloder:
+                for inp, _, _ in dataloder:
                     inp = inp.to(device)
                     y_pred = self.forward(inp)
                     y_pred = torch.softmax(y_pred, dim=1)
@@ -354,6 +358,9 @@ class ResNet_StoDepth(nn.Module):
     def set_path(self, path):
         self.current_node = self.nodes[path[0]]
         self.current_node.set_path(path[1:])
+
+    def eval_adaptation(self, dataset):
+        pass
 
     def forward(self, x):
         x = self.conv1(x)

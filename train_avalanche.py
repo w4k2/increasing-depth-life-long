@@ -1,0 +1,145 @@
+import argparse
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torchvision
+import torchvision.transforms as transf
+import stochastic_depth_modified
+import avalanche
+
+from avalanche.benchmarks.classic import PermutedMNIST, SplitCIFAR100, SplitMNIST
+from avalanche.training.strategies import BaseStrategy
+from avalanche.training.plugins import StrategyPlugin
+
+
+class StochasticDepthStrategy(StrategyPlugin):
+    def __init__(self, device):
+        super().__init__()
+        self.tasks_paths = dict()
+        self.task_label_mappings = dict()
+        self.device = device
+        self.current_train_task_idx = 0
+        self.current_eval_task_idx = 0
+
+    def before_training_exp(self, strategy, **kwargs):
+        self.adapt_dataloder(strategy, self.current_train_task_idx)
+
+        # TODO uncomment this
+        current_path = [0]
+        if self.current_train_task_idx > 0:
+            path = strategy.model.select_most_similar_task(strategy.dataloader, num_classes=2, threshold=0.75)
+            print('min entropy path = ', path)
+            strategy.model.add_new_node(path)
+            strategy.model.to(self.device)
+            current_path = path + [0]
+
+        self.tasks_paths[self.current_train_task_idx] = current_path
+        self.current_train_task_idx += 1
+
+    def adapt_dataloder(self, strategy, task_id):
+        if type(strategy.dataloader) == avalanche.benchmarks.utils.data_loader.TaskBalancedDataLoader:
+            label_mapping = self.get_label_mapping(strategy.adapted_dataset, task_id)
+            for i, dataset in enumerate(strategy.dataloader._dl.datasets):
+                dataset.target_transform = transf.Lambda(lambda l: label_mapping[l])
+                strategy.dataloader._dl.datasets[i] = dataset
+        elif type(strategy.dataloader) == torch.utils.data.DataLoader:
+            label_mapping = self.get_label_mapping(strategy.adapted_dataset, task_id)
+            strategy.dataloader.dataset.target_transform = transf.Lambda(lambda l: label_mapping[l])
+
+    def before_eval_exp(self, strategy, **kwargs):
+        self.adapt_dataloder(strategy, self.current_eval_task_idx)
+        print('plugin before eval, task idx = ', self.current_eval_task_idx)
+        task_path = self.tasks_paths[self.current_eval_task_idx]
+        print('selected path = ', task_path)
+        strategy.model.set_path(task_path)
+
+    def get_label_mapping(self, dataset, task_id):
+        if task_id in self.task_label_mappings:
+            label_mapping = self.task_label_mappings[task_id]
+        else:
+            task_classes = sorted(set(dataset.targets))
+            label_mapping = {class_idx: i for i, class_idx in enumerate(task_classes)}
+            self.task_label_mappings[task_id] = label_mapping
+
+        return label_mapping
+
+    def after_eval_exp(self, strategy, **kwargs):
+        self.current_eval_task_idx += 1
+
+    def after_eval(self, strategy, **kwargs):
+        self.current_eval_task_idx = 0
+
+    # def after_training_iteration(self, strategy, **kwargs):
+    #     setattr(strategy, '_stop_training', True)
+    #   strategy.stop_training()
+
+
+def main():
+    args = parse_args()
+
+    device = torch.device(args.device)
+    train_transforms = transf.Compose([
+        transf.RandomHorizontalFlip(p=0.5),
+        transf.Resize((224, 224)),
+        transf.ToTensor(),
+        # transf.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)) # CIFAR100
+        transf.Normalize((33.3184,), (78.5675,))  # MNIST
+    ])
+    eval_transforms = transf.Compose([
+        transf.Resize((224, 224)),
+        transf.ToTensor(),
+        # transf.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)) # CIFAR100
+        transf.Normalize((33.3184,), (78.5675,))  # MNIST
+    ])
+
+    # perm_mnist = SplitCIFAR100(n_experiences=10,
+    #                            train_transform=train_transforms,
+    #                            eval_transform=eval_transforms)
+    perm_mnist = SplitMNIST(5,
+                            train_transform=train_transforms,
+                            eval_transform=eval_transforms
+                            )
+    train_stream = perm_mnist.train_stream
+    test_stream = perm_mnist.test_stream
+
+    model = stochastic_depth_modified.resnet50_StoDepth_lineardecay(num_classes=2, input_channels=1)
+    # model = torchvision.models.resnet18(num_classes=2)
+    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    criterion = nn.CrossEntropyLoss()
+
+    strategy = BaseStrategy(
+        model,
+        optimizer,
+        criterion,
+        train_mb_size=args.batch_size,
+        eval_mb_size=args.batch_size,
+        train_epochs=args.n_epochs,
+        plugins=[StochasticDepthStrategy(device), ],
+        device=device
+    )
+
+    results = []
+    for i, train_task in enumerate(train_stream):
+        strategy.train(train_task, num_workers=20)
+        selected_tasks = [test_stream[j] for j in range(0, i+1)]
+        eval_results = strategy.eval(selected_tasks)
+        results.append(eval_results)
+
+    print(results)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--device', default='cuda', type=str)
+    parser.add_argument('--batch_size', default=128, type=int)
+    parser.add_argument('--num_workers', default=20, type=int)
+    parser.add_argument('--seed', default=None, type=int)
+    parser.add_argument('--n_epochs', default=20, type=int)
+
+    args = parser.parse_args()
+    return args
+
+
+if __name__ == '__main__':
+    main()

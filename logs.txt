@@ -244,3 +244,80 @@ Files already downloaded and verified
 Files already downloaded and verified
 loss = 0.4868 train_acc = 0.7500 test_acc = 0.7857: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 20/20 [12:40<00:00, 38.02s/it]
 
+
+CIFAR100 evalanche:
+
+-- >> Start of eval phase << --
+plugin before eval, task idx =  0
+selected path =  [0]
+-- Starting eval on experience 0 (Task 0) from test stream --
+100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 8/8 [00:01<00:00,  4.19it/s]
+> Eval on experience 0 (Task 0) from test stream ended.
+	Loss_Exp/eval_phase/test_stream/Task000/Exp000 = 1.0725
+	Top1_Acc_Exp/eval_phase/test_stream/Task000/Exp000 = 0.6400
+plugin before eval, task idx =  1
+selected path =  [0, 0]
+-- Starting eval on experience 1 (Task 0) from test stream --
+100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 8/8 [00:02<00:00,  3.84it/s]
+> Eval on experience 1 (Task 0) from test stream ended.
+	Loss_Exp/eval_phase/test_stream/Task000/Exp001 = 1.4480
+	Top1_Acc_Exp/eval_phase/test_stream/Task000/Exp001 = 0.5620
+plugin before eval, task idx =  2
+selected path =  [0, 0, 0]
+-- Starting eval on experience 2 (Task 0) from test stream --
+100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 8/8 [00:02<00:00,  3.47it/s]
+> Eval on experience 2 (Task 0) from test stream ended.
+	Loss_Exp/eval_phase/test_stream/Task000/Exp002 = 1.6145
+	Top1_Acc_Exp/eval_phase/test_stream/Task000/Exp002 = 0.5120
+plugin before eval, task idx =  3
+selected path =  [0, 0, 0, 0]
+-- Starting eval on experience 3 (Task 0) from test stream --
+100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 8/8 [00:02<00:00,  3.16it/s]
+> Eval on experience 3 (Task 0) from test stream ended.
+	Loss_Exp/eval_phase/test_stream/Task000/Exp003 = 1.9570
+	Top1_Acc_Exp/eval_phase/test_stream/Task000/Exp003 = 0.3950
+plugin before eval, task idx =  4
+selected path =  [0, 0, 0, 1]
+-- Starting eval on experience 4 (Task 0) from test stream --
+100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 8/8 [00:02<00:00,  3.17it/s]
+> Eval on experience 4 (Task 0) from test stream ended.
+	Loss_Exp/eval_phase/test_stream/Task000/Exp004 = 1.6141
+	Top1_Acc_Exp/eval_phase/test_stream/Task000/Exp004 = 0.5140
+plugin before eval, task idx =  5
+selected path =  [0, 0, 0, 2]
+-- Starting eval on experience 5 (Task 0) from test stream --
+100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 8/8 [00:02<00:00,  3.16it/s]
+> Eval on experience 5 (Task 0) from test stream ended.
+	Loss_Exp/eval_phase/test_stream/Task000/Exp005 = 1.7256
+	Top1_Acc_Exp/eval_phase/test_stream/Task000/Exp005 = 0.4910
+plugin before eval, task idx =  6
+selected path =  [0, 0, 0, 2, 0]
+-- Starting eval on experience 6 (Task 0) from test stream --
+100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 8/8 [00:02<00:00,  2.90it/s]
+> Eval on experience 6 (Task 0) from test stream ended.
+	Loss_Exp/eval_phase/test_stream/Task000/Exp006 = 1.7768
+	Top1_Acc_Exp/eval_phase/test_stream/Task000/Exp006 = 0.4640
+plugin before eval, task idx =  7
+selected path =  [0, 0, 0, 2, 1]
+-- Starting eval on experience 7 (Task 0) from test stream --
+100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 8/8 [00:02<00:00,  2.91it/s]
+> Eval on experience 7 (Task 0) from test stream ended.
+	Loss_Exp/eval_phase/test_stream/Task000/Exp007 = 1.6208
+	Top1_Acc_Exp/eval_phase/test_stream/Task000/Exp007 = 0.4750
+plugin before eval, task idx =  8
+selected path =  [0, 0, 0, 2, 2]
+-- Starting eval on experience 8 (Task 0) from test stream --
+100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 8/8 [00:02<00:00,  2.91it/s]
+> Eval on experience 8 (Task 0) from test stream ended.
+	Loss_Exp/eval_phase/test_stream/Task000/Exp008 = 1.2322
+	Top1_Acc_Exp/eval_phase/test_stream/Task000/Exp008 = 0.6100
+plugin before eval, task idx =  9
+selected path =  [0, 0, 0, 2, 3]
+-- Starting eval on experience 9 (Task 0) from test stream --
+100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 8/8 [00:02<00:00,  2.91it/s]
+> Eval on experience 9 (Task 0) from test stream ended.
+	Loss_Exp/eval_phase/test_stream/Task000/Exp009 = 1.4388
+	Top1_Acc_Exp/eval_phase/test_stream/Task000/Exp009 = 0.5360
+-- >> End of eval phase << --
+	Loss_Stream/eval_phase/test_stream/Task000 = 1.5500
+	Top1_Acc_Stream/eval_phase/test_stream/Task000 = 0.5199

@@ -24,8 +24,6 @@ class StochasticDepthStrategy(StrategyPlugin):
 
     def before_training_exp(self, strategy, **kwargs):
         self.adapt_dataloder(strategy, self.current_train_task_idx)
-        # strategy.optimizer = optim.Adam([{'params': filter(lambda p: p.requires_grad, strategy.model.parameters())}], lr=0.0001, weight_decay=1e-6, amsgrad=False)
-        # print(strategy.optimizer)
 
         current_path = [0]
         if self.current_train_task_idx > 0:
@@ -35,8 +33,7 @@ class StochasticDepthStrategy(StrategyPlugin):
             strategy.model.to(self.device)
             current_path = strategy.model.get_current_path()
 
-        # for name, p in strategy.model.named_parameters():
-        #     print(f'{name} requires_grad = {p.requires_grad}')
+        strategy.optimizer = optim.Adam([{'params': filter(lambda p: p.requires_grad, strategy.model.parameters())}], lr=0.0001, weight_decay=1e-6, amsgrad=False)
 
         self.tasks_paths[self.current_train_task_idx] = current_path
         self.current_train_task_idx += 1

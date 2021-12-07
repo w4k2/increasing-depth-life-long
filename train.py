@@ -7,8 +7,8 @@ import itertools
 import torchvision
 import argparse
 
-import stochastic_depth_model
-import stochastic_depth_modified
+import stochastic_depth
+import stochastic_depth_lifelong
 from cifar10 import get_dataloder
 from collections import namedtuple
 from sklearn.metrics import accuracy_score
@@ -26,7 +26,7 @@ def main():
 
     # model = stochastic_depth_model.resnet18_StoDepth_lineardecay(num_classes=19)
     # model = stochastic_depth_modified.resnet101_StoDepth_lineardecay(num_classes=19)
-    model = stochastic_depth_modified.resnet50_StoDepth_lineardecay(num_classes=10)
+    model = stochastic_depth_lifelong.resnet50_StoDepth_lineardecay(num_classes=10)
     # model = torchvision.models.resnet18(num_classes=19)
 
     tasks = [list(i for i in range(j, j+10)) for j in range(0, 100, 10)]  # [(0, 1, 3), (0, 1, 3), (0, 1, 3), (8, 9, 5), (2, 4, 6)]

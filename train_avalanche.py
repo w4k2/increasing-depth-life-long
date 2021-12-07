@@ -4,13 +4,12 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transf
-import stochastic_depth_modified
-import stochastic_depth_model
-import avalanche
+import stochastic_depth_lifelong
+import stochastic_depth
 
 from avalanche.benchmarks.classic import PermutedMNIST, SplitCIFAR100, SplitMNIST, SplitCIFAR10
 from avalanche.training.strategies import BaseStrategy
-from avalanche_plugins import *
+from custom_plugins import *
 
 
 def main():
@@ -19,7 +18,7 @@ def main():
     device = torch.device(args.device)
     train_stream, test_stream = get_data(args.dataset)
     input_channels = 1 if args.dataset == 'mnist' else 3
-    model = stochastic_depth_modified.resnet50_StoDepth_lineardecay(num_classes=10, input_channels=input_channels)
+    model = stochastic_depth_lifelong.resnet50_StoDepth_lineardecay(num_classes=10, input_channels=input_channels)
     # model = stochastic_depth_model.resnet50_StoDepth_lineardecay(num_classes=10)
     # model = torchvision.models.resnet18(num_classes=10)
     optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-6, amsgrad=False)

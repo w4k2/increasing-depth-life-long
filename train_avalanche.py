@@ -18,14 +18,18 @@ def main():
     device = torch.device(args.device)
     train_stream, test_stream = get_data(args.dataset)
     input_channels = 1 if args.dataset == 'mnist' else 3
-    model = stochastic_depth_lifelong.resnet50_StoDepth_lineardecay(num_classes=10, input_channels=input_channels)
-    # model = stochastic_depth_model.resnet50_StoDepth_lineardecay(num_classes=10)
-    # model = torchvision.models.resnet18(num_classes=10)
+
+    if args.method == 'baseline':
+        model = stochastic_depth.resnet50_StoDepth_lineardecay(num_classes=10)
+        plugin = BaselinePlugin(model, device)
+    elif args.method == 'll-stochastic-depth':
+        model = stochastic_depth_lifelong.resnet50_StoDepth_lineardecay(num_classes=10, input_channels=input_channels)
+        plugin = StochasticDepthPlugin(device)
+
     optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-6, amsgrad=False)
     criterion = nn.CrossEntropyLoss()
-
     strategy = BaseStrategy(model, optimizer, criterion, train_mb_size=args.batch_size, eval_mb_size=args.batch_size,
-                            train_epochs=args.n_epochs, plugins=[StochasticDepthPlugin(device)], device=device)
+                            train_epochs=args.n_epochs, plugins=[plugin], device=device)
 
     results = []
     for i, train_task in enumerate(train_stream):
@@ -40,6 +44,7 @@ def main():
 def parse_args():
     parser = argparse.ArgumentParser()
 
+    parser.add_argument('--method', default='ll-stochastic-depth', choices=('ll-stochastic-depth', 'baseline'))
     parser.add_argument('--dataset', default='cifar100', choices=('cifar100', 'cifar10', 'mnist'))
     parser.add_argument('--device', default='cuda', type=str)
     parser.add_argument('--batch_size', default=128, type=int)

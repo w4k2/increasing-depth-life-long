@@ -32,10 +32,10 @@ class StoDepth_BasicBlock(nn.Module):
     def __init__(self, prob, multFlag, inplanes, planes, stride=1, downsample=None):
         super(StoDepth_BasicBlock, self).__init__()
         self.conv1 = conv3x3(inplanes, planes, stride)
-        self.bn1 = nn.BatchNorm2d(planes)
+        self.bn1 = nn.InstanceNorm2d(planes)
         self.relu = nn.ReLU(inplace=True)
         self.conv2 = conv3x3(planes, planes)
-        self.bn2 = nn.BatchNorm2d(planes)
+        self.bn2 = nn.InstanceNorm2d(planes)
         self.downsample = downsample
         self.stride = stride
         self.prob = prob
@@ -98,11 +98,11 @@ class StoDepth_Bottleneck(nn.Module):
     def __init__(self, prob, multFlag, inplanes, planes, stride=1, downsample=None):
         super(StoDepth_Bottleneck, self).__init__()
         self.conv1 = conv1x1(inplanes, planes)
-        self.bn1 = nn.BatchNorm2d(planes)
+        self.bn1 = nn.InstanceNorm2d(planes)
         self.conv2 = conv3x3(planes, planes, stride)
-        self.bn2 = nn.BatchNorm2d(planes)
+        self.bn2 = nn.InstanceNorm2d(planes)
         self.conv3 = conv1x1(planes, planes * self.expansion)
-        self.bn3 = nn.BatchNorm2d(planes * self.expansion)
+        self.bn3 = nn.InstanceNorm2d(planes * self.expansion)
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
         self.stride = stride
@@ -172,12 +172,12 @@ class StoDepth_Bottleneck(nn.Module):
 
 class ResNet_StoDepth_lineardecay(nn.Module):
 
-    def __init__(self, block, prob_0_L, multFlag, layers, num_classes=1000, zero_init_residual=False, dropout_p=0.3):
+    def __init__(self, block, prob_0_L, multFlag, layers, num_classes=1000, input_channels=3):
         super(ResNet_StoDepth_lineardecay, self).__init__()
         self.inplanes = 64
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
+        self.conv1 = nn.Conv2d(input_channels, 64, kernel_size=7, stride=2, padding=3,
                                bias=False)
-        self.bn1 = nn.BatchNorm2d(64)
+        self.bn1 = nn.InstanceNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
@@ -196,26 +196,13 @@ class ResNet_StoDepth_lineardecay(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
-            elif isinstance(m, nn.BatchNorm2d):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
-
-        # Zero-initialize the last BN in each residual branch,
-        # so that the residual branch starts with zeros, and each residual block behaves like an identity.
-        # This improves the model by 0.2~0.3% according to https://arxiv.org/abs/1706.02677
-        if zero_init_residual:
-            for m in self.modules():
-                if isinstance(m, StoDepth_lineardecayBottleneck):
-                    nn.init.constant_(m.bn3.weight, 0)
-                elif isinstance(m, StoDepth_lineardecayBasicBlock):
-                    nn.init.constant_(m.bn2.weight, 0)
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
                 conv1x1(self.inplanes, planes * block.expansion, stride),
-                nn.BatchNorm2d(planes * block.expansion),
+                nn.InstanceNorm2d(planes * block.expansion),
             )
 
         layers = []

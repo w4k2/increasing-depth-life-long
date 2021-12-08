@@ -1,6 +1,7 @@
 import avalanche
 import torch
 import torch.optim as optim
+import copy
 
 from torchvision.transforms import Lambda
 from avalanche.training.plugins import StrategyPlugin
@@ -30,6 +31,49 @@ class ConvertedLabelsPluginMixin:
             label_mapping = {class_idx: i for i, class_idx in enumerate(task_classes)}
             self.task_label_mappings[task_id] = label_mapping
         return label_mapping
+
+
+class BaselinePlugin(ConvertedLabelsPluginMixin, StrategyPlugin):
+    """Creates new instance of predefeined model for each task
+    Can be used as upper bound for performance
+    """
+
+    def __init__(self, base_model, device) -> None:
+        super().__init__()
+        self.base_model = base_model
+        self.device = device
+        self.task_models = []
+        self.current_train_task_idx = 0
+        self.current_eval_task_idx = 0
+
+    def before_training_exp(self, strategy, **kwargs):
+        self.adapt_dataloder(strategy, self.current_train_task_idx)
+
+        strategy.model = copy.deepcopy(self.base_model)
+        strategy.model.to(self.device)
+        strategy.make_optimizer()
+
+    def after_training_exp(self, strategy, **kwargs):
+        task_model = copy.deepcopy(strategy.model)
+        for param in task_model.parameters():
+            param.requires_grad = False
+            param.grad = None
+        self.task_models.append(task_model)
+        self.current_train_task_idx += 1
+
+    def before_eval_exp(self, strategy, **kwargs):
+        self.adapt_dataloder(strategy, self.current_eval_task_idx)
+
+        task_model = self.task_models[self.current_eval_task_idx]
+        task_model.to(self.device)
+        task_model = task_model.eval()
+        strategy.model = task_model
+
+    def after_eval_exp(self, strategy, **kwargs):
+        self.current_eval_task_idx += 1
+
+    def after_eval(self, strategy, **kwargs):
+        self.current_eval_task_idx = 0
 
 
 class StochasticDepthPlugin(ConvertedLabelsPluginMixin, StrategyPlugin):

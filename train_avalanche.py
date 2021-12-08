@@ -16,7 +16,7 @@ def main():
     args = parse_args()
 
     device = torch.device(args.device)
-    train_stream, test_stream = get_data(args.dataset)
+    train_stream, test_stream = get_data(args.dataset, args.seed)
     input_channels = 1 if args.dataset == 'mnist' else 3
 
     if args.method == 'baseline':
@@ -49,14 +49,14 @@ def parse_args():
     parser.add_argument('--device', default='cuda', type=str)
     parser.add_argument('--batch_size', default=128, type=int)
     parser.add_argument('--num_workers', default=20, type=int)
-    parser.add_argument('--seed', default=None, type=int)
+    parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--n_epochs', default=20, type=int)
 
     args = parser.parse_args()
     return args
 
 
-def get_data(dataset_name):
+def get_data(dataset_name, seed):
     norm_stats = None
     if dataset_name == 'cifar10':
         norm_stats = (0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)
@@ -81,15 +81,20 @@ def get_data(dataset_name):
     if dataset_name == 'cifar10':
         benchmark = SplitCIFAR10(n_experiences=2,
                                  train_transform=train_transforms,
-                                 eval_transform=eval_transforms)
+                                 eval_transform=eval_transforms,
+                                 seed=seed
+                                 )
     elif dataset_name == 'cifar100':
         benchmark = SplitCIFAR100(n_experiences=10,
                                   train_transform=train_transforms,
-                                  eval_transform=eval_transforms)
+                                  eval_transform=eval_transforms,
+                                  seed=seed
+                                  )
     elif dataset_name == 'mnist':
         benchmark = SplitMNIST(5,
                                train_transform=train_transforms,
-                               eval_transform=eval_transforms
+                               eval_transform=eval_transforms,
+                               seed=seed
                                )
     train_stream = benchmark.train_stream
     test_stream = benchmark.test_stream

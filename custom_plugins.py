@@ -7,10 +7,18 @@ from torchvision.transforms import Lambda
 from avalanche.training.plugins import StrategyPlugin
 
 
-class ConvertedLabelsPluginMixin:
+class ConvertedLabelsPlugin(StrategyPlugin):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.task_label_mappings = dict()
+        self.current_train_task_idx = 0
+        self.current_eval_task_idx = 0
+
+    def before_training_exp(self, strategy, **kwargs):
+        self.adapt_dataloder(strategy, self.current_train_task_idx)
+
+    def before_eval_exp(self, strategy, **kwargs):
+        self.adapt_dataloder(strategy, self.current_eval_task_idx)
 
     def adapt_dataloder(self, strategy, task_id):
         if type(strategy.dataloader) == avalanche.benchmarks.utils.data_loader.TaskBalancedDataLoader:
@@ -32,8 +40,24 @@ class ConvertedLabelsPluginMixin:
             self.task_label_mappings[task_id] = label_mapping
         return label_mapping
 
+    def after_training_exp(self, strategy, **kwargs):
+        # dataset adaptation for ewc
+        label_mapping = self.get_label_mapping(strategy.experience.dataset, self.current_train_task_idx)
+        strategy.experience.dataset.target_transform = Lambda(lambda l: label_mapping[l])
 
-class BaselinePlugin(ConvertedLabelsPluginMixin, StrategyPlugin):
+        self.current_train_task_idx += 1
+
+    def after_eval_exp(self, strategy, **kwargs):
+        self.current_eval_task_idx += 1
+
+    def after_eval(self, strategy, **kwargs):
+        self.current_eval_task_idx = 0
+
+    # def after_training_iteration(self, strategy, **kwargs):
+    #     strategy.stop_training()
+
+
+class BaselinePlugin(ConvertedLabelsPlugin):
     """Creates new instance of predefeined model for each task
     Can be used as upper bound for performance
     """
@@ -76,7 +100,7 @@ class BaselinePlugin(ConvertedLabelsPluginMixin, StrategyPlugin):
         self.current_eval_task_idx = 0
 
 
-class StochasticDepthPlugin(ConvertedLabelsPluginMixin, StrategyPlugin):
+class StochasticDepthPlugin(ConvertedLabelsPlugin):
     def __init__(self, device):
         super().__init__()
         self.tasks_paths = dict()

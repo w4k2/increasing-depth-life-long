@@ -11,14 +11,14 @@ class ConvertedLabelsPlugin(StrategyPlugin):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.task_label_mappings = dict()
-        self.current_train_task_idx = 0
-        self.current_eval_task_idx = 0
 
     def before_training_exp(self, strategy, **kwargs):
-        self.adapt_dataloder(strategy, self.current_train_task_idx)
+        task_id = strategy.experience.current_experience
+        self.adapt_dataloder(strategy, task_id)
 
     def before_eval_exp(self, strategy, **kwargs):
-        self.adapt_dataloder(strategy, self.current_eval_task_idx)
+        task_id = strategy.experience.current_experience
+        self.adapt_dataloder(strategy, task_id)
 
     def adapt_dataloder(self, strategy, task_id):
         if type(strategy.dataloader) == avalanche.benchmarks.utils.data_loader.TaskBalancedDataLoader:
@@ -42,16 +42,9 @@ class ConvertedLabelsPlugin(StrategyPlugin):
 
     def after_training_exp(self, strategy, **kwargs):
         # dataset adaptation for ewc
-        label_mapping = self.get_label_mapping(strategy.experience.dataset, self.current_train_task_idx)
+        task_id = strategy.experience.current_experience
+        label_mapping = self.get_label_mapping(strategy.experience.dataset, task_id)
         strategy.experience.dataset.target_transform = Lambda(lambda l: label_mapping[l])
-
-        self.current_train_task_idx += 1
-
-    def after_eval_exp(self, strategy, **kwargs):
-        self.current_eval_task_idx += 1
-
-    def after_eval(self, strategy, **kwargs):
-        self.current_eval_task_idx = 0
 
     # def after_training_iteration(self, strategy, **kwargs):
     #     strategy.stop_training()
@@ -67,11 +60,9 @@ class BaselinePlugin(ConvertedLabelsPlugin):
         self.base_model = base_model
         self.device = device
         self.task_models = []
-        self.current_train_task_idx = 0
-        self.current_eval_task_idx = 0
 
     def before_training_exp(self, strategy, **kwargs):
-        self.adapt_dataloder(strategy, self.current_train_task_idx)
+        super().before_training_exp(strategy)
 
         strategy.model = copy.deepcopy(self.base_model)
         strategy.model.to(self.device)
@@ -83,21 +74,15 @@ class BaselinePlugin(ConvertedLabelsPlugin):
             param.requires_grad = False
             param.grad = None
         self.task_models.append(task_model)
-        self.current_train_task_idx += 1
 
     def before_eval_exp(self, strategy, **kwargs):
-        self.adapt_dataloder(strategy, self.current_eval_task_idx)
+        task_id = strategy.experience.current_experience
+        self.adapt_dataloder(strategy, task_id)
 
-        task_model = self.task_models[self.current_eval_task_idx]
+        task_model = self.task_models[task_id]
         task_model.to(self.device)
         task_model = task_model.eval()
         strategy.model = task_model
-
-    def after_eval_exp(self, strategy, **kwargs):
-        self.current_eval_task_idx += 1
-
-    def after_eval(self, strategy, **kwargs):
-        self.current_eval_task_idx = 0
 
 
 class StochasticDepthPlugin(ConvertedLabelsPlugin):
@@ -105,14 +90,13 @@ class StochasticDepthPlugin(ConvertedLabelsPlugin):
         super().__init__()
         self.tasks_paths = dict()
         self.device = device
-        self.current_train_task_idx = 0
-        self.current_eval_task_idx = 0
 
     def before_training_exp(self, strategy, **kwargs):
-        self.adapt_dataloder(strategy, self.current_train_task_idx)
+        task_id = strategy.experience.current_experience
+        self.adapt_dataloder(strategy, task_id)
 
         current_path = [0]
-        if self.current_train_task_idx > 0:
+        if task_id > 0:
             path = strategy.model.select_most_similar_task(strategy.dataloader, num_classes=10, threshold=0.6)
             print('min entropy path = ', path)
             strategy.model.add_new_node(path)
@@ -121,21 +105,16 @@ class StochasticDepthPlugin(ConvertedLabelsPlugin):
 
         strategy.optimizer = optim.Adam([{'params': filter(lambda p: p.requires_grad, strategy.model.parameters())}], lr=0.0001, weight_decay=1e-6, amsgrad=False)
 
-        self.tasks_paths[self.current_train_task_idx] = current_path
-        self.current_train_task_idx += 1
+        print('training od task id = ', task_id)
+        self.tasks_paths[task_id] = current_path
 
     def before_eval_exp(self, strategy, **kwargs):
-        self.adapt_dataloder(strategy, self.current_eval_task_idx)
-        print('plugin before eval, task idx = ', self.current_eval_task_idx)
-        task_path = self.tasks_paths[self.current_eval_task_idx]
+        task_id = strategy.experience.current_experience
+        self.adapt_dataloder(strategy, task_id)
+        print('plugin before eval, task idx = ', task_id)
+        task_path = self.tasks_paths[task_id]
         print('selected path = ', task_path)
         strategy.model.set_path(task_path)
-
-    def after_eval_exp(self, strategy, **kwargs):
-        self.current_eval_task_idx += 1
-
-    def after_eval(self, strategy, **kwargs):
-        self.current_eval_task_idx = 0
 
     # def after_training_iteration(self, strategy, **kwargs):
     #     strategy.stop_training()

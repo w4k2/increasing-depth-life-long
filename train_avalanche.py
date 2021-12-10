@@ -75,7 +75,7 @@ def get_data(dataset_name, seed):
         norm_stats = (0.1307,), (0.3081,)
 
     train_transforms = transf.Compose([
-        # transf.RandomHorizontalFlip(p=0.5),
+        transf.RandomHorizontalFlip(p=0.5),
         transf.Resize((224, 224)),
         transf.ToTensor(),
         transf.Normalize(*norm_stats)

@@ -116,5 +116,5 @@ class StochasticDepthPlugin(ConvertedLabelsPlugin):
         print('selected path = ', task_path)
         strategy.model.set_path(task_path)
 
-    # def after_training_iteration(self, strategy, **kwargs):
-    #     strategy.stop_training()
+    def after_training_iteration(self, strategy, **kwargs):
+        strategy.stop_training()

@@ -9,6 +9,7 @@ import stochastic_depth
 import mlflow
 
 from avalanche.benchmarks.classic import PermutedMNIST, SplitCIFAR100, SplitMNIST, SplitCIFAR10
+from avalanche.evaluation.metrics.confusion_matrix import StreamConfusionMatrix
 from avalanche.training.strategies import BaseStrategy, EWC
 from avalanche.models import SimpleMLP
 from mlflow_logger import MLFlowLogger
@@ -24,7 +25,7 @@ def main():
 
     device = torch.device(args.device)
     train_stream, test_stream = get_data(args.dataset, args.seed)
-    strategy = get_method(args, device)
+    strategy, mlf_logger = get_method(args, device)
 
     results = []
     for i, train_task in enumerate(train_stream):
@@ -34,6 +35,15 @@ def main():
         results.append(eval_results)
 
     print(results)
+
+    custom_plugin = None
+    for plugin in strategy.plugins:
+        if issubclass(type(plugin), ConvertedLabelsPlugin):
+            custom_plugin = plugin
+            break
+
+    result = compute_conf_matrix(test_stream, strategy, custom_plugin)
+    mlf_logger.log_conf_matrix(result)
 
 
 def parse_args():
@@ -142,7 +152,7 @@ def get_method(args, device):
                        ewc_lambda=ewc_lambda, train_mb_size=args.batch_size, eval_mb_size=args.batch_size,
                        device=device, train_epochs=args.n_epochs, plugins=[], evaluator=evaluation_plugin)
         # ConvertedLabelsPlugin()])
-    return strategy
+    return strategy, mlf_logger
 
 
 def get_base_strategy(batch_size, n_epochs, device, model, plugin, evaluation_plugin):
@@ -151,6 +161,32 @@ def get_base_strategy(batch_size, n_epochs, device, model, plugin, evaluation_pl
     strategy = BaseStrategy(model, optimizer, criterion, train_mb_size=batch_size, eval_mb_size=batch_size,
                             train_epochs=n_epochs, plugins=[plugin], device=device, evaluator=evaluation_plugin)
     return strategy
+
+
+def compute_conf_matrix(test_stream, strategy, custom_plugin):
+    conf_matrix_metric = StreamConfusionMatrix(absolute_class_order=False)
+    num_classes_per_task = 10
+    with torch.no_grad():
+        for i, strategy.experience in enumerate(test_stream):
+            class_mapping = custom_plugin.task_label_mappings[i]
+            strategy.eval_dataset_adaptation()
+            strategy.make_eval_dataloader()
+            strategy.model = strategy.model_adaptation()
+
+            for strategy.mbatch in strategy.dataloader:
+                getattr(strategy, '_unpack_minibatch')()
+                mb_output = strategy.forward()
+                new_output = torch.zeros((mb_output.shape[0], 100))
+                new_output[:, i*num_classes_per_task:(i+1)*num_classes_per_task] = mb_output
+
+                mb_y = strategy.mb_y
+                mb_y = torch.Tensor([class_mapping[l.item()] for l in mb_y])
+                mb_y += i * num_classes_per_task
+
+                conf_matrix_metric.update(strategy.mb_y, new_output)
+
+    result = conf_matrix_metric.result()
+    return result
 
 
 if __name__ == '__main__':

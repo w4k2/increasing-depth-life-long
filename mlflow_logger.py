@@ -1,7 +1,11 @@
+from avalanche.logging import StrategyLogger
 import mlflow
 import re
-
-from avalanche.logging import StrategyLogger
+import seaborn as sn
+import torch
+import matplotlib.pyplot as plt
+import tempfile
+import pathlib
 
 
 class MLFlowLogger(StrategyLogger):
@@ -15,9 +19,7 @@ class MLFlowLogger(StrategyLogger):
 
     def log_single_metric(self, name, value, x_plot):
         with mlflow.start_run(run_id=self.run_id):
-            print(f'mlflow logger call, name = {name}, value = {value}, x_plot = {x_plot}')
             metric_name = self.map_metric_name(name)
-            print('logging with name = ', metric_name)
             mlflow.log_metric(metric_name, value)
 
     @staticmethod
@@ -38,17 +40,25 @@ class MLFlowLogger(StrategyLogger):
 
         res = re.finditer(r'Exp[0-9]+', name)
         res = list(res)
-        # print(list(res))
         if len(res) > 0:
             i = res[0].start()
-            # print(dir(i))
             task_id_str = name[i+3:i+6]
-            # print('task_id_str = ', task_id_str)
             task_id = int(task_id_str)
-            # print('task_id = ', task_id)
             new_name = f'{phase}_{metric_name}_task_{task_id}'
         elif phase == 'train':
             new_name = f'{phase}_{metric_name}_task'
         else:
             new_name = f'avrg_{phase}_{metric_name}'
         return new_name
+
+    def log_conf_matrix(self, matrix: torch.Tensor):
+        plt.figure()
+        ax = sn.heatmap(matrix, annot=False)
+        ax.set_xlabel('Predicted label')
+        ax.set_ylabel('True label')
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            save_path = pathlib.Path(tmpdir) / f"test_confusion_matrix.jpg"
+            plt.savefig(save_path)
+            with mlflow.start_run(run_id=self.run_id):
+                mlflow.log_artifact(save_path, f'test_confusion_matrix')

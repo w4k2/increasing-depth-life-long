@@ -53,6 +53,7 @@ def parse_args():
     parser.add_argument('--num_workers', default=20, type=int)
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--n_epochs', default=20, type=int)
+    parser.add_argument('--debug', action='store_true', help='if true, execute only one iteration in training epoch')
 
     parser.add_argument('--entropy_threshold', default=0.7, type=float, help='entropy threshold for adding new node attached directly to backbone')
 
@@ -135,14 +136,18 @@ def get_method(args, device, use_mlflow=True):
         loggers=loggers,
         suppress_warnings=True)
 
+    plugins = list()
+    if args.debug:
+        plugins.append(DebugingPlugin())
+
     if args.method == 'baseline':
         model = stochastic_depth.resnet50_StoDepth_lineardecay(num_classes=10)
-        plugin = BaselinePlugin(model, device)
-        strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugin, evaluation_plugin)
+        plugins.append(BaselinePlugin(model, device))
+        strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugins, evaluation_plugin)
     elif args.method == 'll-stochastic-depth':
         model = stochastic_depth_lifelong.resnet50_StoDepth_lineardecay(num_classes=10, input_channels=input_channels)
-        plugin = StochasticDepthPlugin(args.entropy_threshold, device)
-        strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugin, evaluation_plugin)
+        plugins.append(StochasticDepthPlugin(args.entropy_threshold, device))
+        strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugins, evaluation_plugin)
     elif args.method == 'ewc':
         # model = SimpleMLP(num_classes=10)
         # model = torchvision.models.resnet18(num_classes=10)
@@ -153,16 +158,16 @@ def get_method(args, device, use_mlflow=True):
         ewc_lambda = 100
         strategy = EWC(model, optimizer, criterion,
                        ewc_lambda=ewc_lambda, train_mb_size=args.batch_size, eval_mb_size=args.batch_size,
-                       device=device, train_epochs=args.n_epochs, plugins=[], evaluator=evaluation_plugin)
+                       device=device, train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin)
         # ConvertedLabelsPlugin()])
     return strategy, mlf_logger
 
 
-def get_base_strategy(batch_size, n_epochs, device, model, plugin, evaluation_plugin):
+def get_base_strategy(batch_size, n_epochs, device, model, plugins, evaluation_plugin):
     optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-6, amsgrad=False)
     criterion = nn.CrossEntropyLoss()
     strategy = BaseStrategy(model, optimizer, criterion, train_mb_size=batch_size, eval_mb_size=batch_size,
-                            train_epochs=n_epochs, plugins=[plugin], device=device, evaluator=evaluation_plugin)
+                            train_epochs=n_epochs, plugins=plugins, device=device, evaluator=evaluation_plugin)
     return strategy
 
 

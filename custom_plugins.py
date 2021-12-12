@@ -7,6 +7,14 @@ from torchvision.transforms import Lambda
 from avalanche.training.plugins import StrategyPlugin
 
 
+class DebugingPlugin(StrategyPlugin):
+    def __init__(self):
+        super().__init__()
+
+    def after_training_iteration(self, strategy, **kwargs):
+        strategy.stop_training()
+
+
 class ConvertedLabelsPlugin(StrategyPlugin):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -45,9 +53,6 @@ class ConvertedLabelsPlugin(StrategyPlugin):
         task_id = strategy.experience.current_experience
         label_mapping = self.get_label_mapping(strategy.experience.dataset, task_id)
         strategy.experience.dataset.target_transform = Lambda(lambda l: label_mapping[l])
-
-    # def after_training_iteration(self, strategy, **kwargs):
-    #     strategy.stop_training()
 
 
 class BaselinePlugin(ConvertedLabelsPlugin):
@@ -108,6 +113,3 @@ class StochasticDepthPlugin(ConvertedLabelsPlugin):
         task_path = strategy.model.tasks_paths[task_id]
         print('selected path = ', task_path)
         strategy.model.set_path(task_path)
-
-    # def after_training_iteration(self, strategy, **kwargs):
-    #     strategy.stop_training()

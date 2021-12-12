@@ -196,6 +196,10 @@ class Node(nn.Module):
         self.all_children = []
         self.current_child = None
 
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+
     def forward(self, x):
         feature_maps = self.layer3(x)
         if self.current_child:

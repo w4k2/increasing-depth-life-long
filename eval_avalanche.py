@@ -7,7 +7,6 @@ from train_avalanche import get_data, get_method
 
 def main():
     args = parse_args()
-    args.n_epochs = 0
 
     device = torch.device(args.device)
     _, test_stream = get_data(args.dataset, args.seed)
@@ -21,7 +20,7 @@ def main():
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--weights_path', type=pathlib.Path)
+    parser.add_argument('--weights_path', type=pathlib.Path, required=True)
     parser.add_argument('--method', default='ll-stochastic-depth', choices=('baseline', 'll-stochastic-depth', 'ewc'))
     parser.add_argument('--dataset', default='cifar100', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist'))
     parser.add_argument('--device', default='cuda', type=str)
@@ -30,6 +29,9 @@ def parse_args():
     parser.add_argument('--seed', default=42, type=int)
 
     args = parser.parse_args()
+    args.n_epochs = 0
+    args.debug = False
+    args.entropy_threshold = 0.7
     return args
 
 

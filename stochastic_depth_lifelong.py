@@ -283,11 +283,10 @@ class ResNet_StoDepth(nn.Module):
 
         self.block = block
         self.layers = layers
-        self.num_classes = num_classes
 
         self.nodes = nn.ModuleList([])
         self.current_node = None
-        self.add_new_node([], freeze_previous=False)
+        self.add_new_node([], freeze_previous=False, num_classes=num_classes)
 
         self.tasks_paths = dict()
 
@@ -310,21 +309,21 @@ class ResNet_StoDepth(nn.Module):
         if task_id > 0:
             path = self.select_most_similar_task(dataloader, num_classes=num_classes, device=device, threshold=0.6)
             print('min entropy path = ', path)
-            self.add_new_node(path)
+            self.add_new_node(path, num_classes)
             self.to(device)
             current_path = self.get_current_path()
 
         self.tasks_paths[task_id] = current_path
 
     # TODO check multFlag evaluation
-    def add_new_node(self, path, freeze_previous=True):
+    def add_new_node(self, path, num_classes, freeze_previous=True):
         if freeze_previous:
             for param in self.parameters():
                 param.requires_grad = False
                 param.grad = None
 
         if self.current_node == None or len(path) == 0:
-            node = Node(self.task_inplanes, self.multFlag, self.task_base_prob, self.prob_step, self.block, self.layers, self.num_classes)
+            node = Node(self.task_inplanes, self.multFlag, self.task_base_prob, self.prob_step, self.block, self.layers, num_classes)
             self.current_node = node
             self.nodes.append(node)
         else:

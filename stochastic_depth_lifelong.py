@@ -245,6 +245,24 @@ class Node(nn.Module):
             current_path.extend(self.current_child.get_current_path())
         return current_path
 
+    def current_depth(self):
+        depth = len(self.layer3) + len(self.layer4)
+        if self.current_child:
+            depth += self.current_child.current_depth()
+        return depth
+
+    def update_probs(self, prob_now, prob_step):
+        for block in self.layer3:
+            block.prob = prob_now
+            prob_now = prob_now - prob_step
+
+        for block in self.layer4:
+            block.prob = prob_now
+            prob_now = prob_now - prob_step
+
+        if self.current_child:
+            self.current_child.update_probs(prob_now, prob_step)
+
 
 class ResNet_StoDepth(nn.Module):
 
@@ -257,9 +275,12 @@ class ResNet_StoDepth(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
+        self.prob_begin = prob_begin
+        self.prob_end = prob_end
+
         prob_now = prob_begin
         prob_delta = prob_begin - prob_end
-        self.prob_step = prob_delta / (sum(layers[:2]) + sum(layers[2:])*max_depth - 1)
+        self.prob_step = prob_delta / (sum(layers)*max_depth - 1)
 
         self.layer1, inplanes, prob_now = make_layer(inplanes, prob_now, self.prob_step, block, 64, layers[0])
         self.layer2, inplanes, prob_now = make_layer(inplanes, prob_now, self.prob_step, block, 128, layers[1], stride=2)
@@ -276,7 +297,7 @@ class ResNet_StoDepth(nn.Module):
 
         self.nodes = nn.ModuleList([])
         self.current_node = None
-        self.add_new_node([], freeze_previous=False, num_classes=num_classes)
+        self.add_first_node(num_classes=num_classes)
 
         self.tasks_paths = dict()
 
@@ -294,6 +315,12 @@ class ResNet_StoDepth(nn.Module):
                 elif isinstance(m, StoDepth_BasicBlock):
                     nn.init.constant_(m.bn2.weight, 0)
 
+    def add_first_node(self, num_classes):
+        node = Node(self.task_inplanes, self.task_base_prob, self.prob_step, self.block, self.layers, num_classes)
+        self.current_node = node
+        self.nodes.append(node)
+        self.update_probs()
+
     def update_structure(self, task_id, dataloader, num_classes, device):
         current_path = [0]
         if task_id > 0:
@@ -305,19 +332,14 @@ class ResNet_StoDepth(nn.Module):
 
         self.tasks_paths[task_id] = current_path
 
-    def add_new_node(self, path, num_classes, freeze_previous=True):
-        if freeze_previous:
-            for param in self.parameters():
-                param.requires_grad = False
-                param.grad = None
+    def add_new_node(self, path, num_classes):
+        for param in self.parameters():
+            param.requires_grad = False
+            param.grad = None
 
-        if self.current_node == None or len(path) == 0:
-            node = Node(self.task_inplanes, self.task_base_prob, self.prob_step, self.block, self.layers, num_classes)
-            self.current_node = node
-            self.nodes.append(node)
-        else:
-            self.set_path(path)
-            self.current_node.add_new_leaf(path[1:], num_classes)
+        self.set_path(path)
+        self.current_node.add_new_leaf(path[1:], num_classes)
+        self.update_probs()
 
     def select_most_similar_task(self, dataloder, num_classes, device='cuda', threshold=0.5):
         all_paths = self.get_all_paths()
@@ -366,9 +388,34 @@ class ResNet_StoDepth(nn.Module):
         entropy = - torch.sum(log_p * p, dim=1)
         return entropy
 
+    # TODO: update probs
     def set_path(self, path):
         self.current_node = self.nodes[path[0]]
         self.current_node.set_path(path[1:])
+        self.update_probs()
+
+    def update_probs(self):
+        depth = self.current_depth()
+        prob_now = self.prob_begin
+        prob_delta = self.prob_begin - self.prob_end
+        prob_step = prob_delta / (depth - 1)
+
+        for block in self.layer1:
+            block.prob = prob_now
+            prob_now = prob_now - prob_step
+
+        for block in self.layer2:
+            block.prob = prob_now
+            prob_now = prob_now - prob_step
+
+        if self.current_node:
+            self.current_node.update_probs(prob_now, prob_step)
+
+    def current_depth(self):
+        depth = len(self.layer1) + len(self.layer2)
+        if self.current_node:
+            depth += self.current_node.current_depth()
+        return depth
 
     def get_current_path(self):
         current_path = []

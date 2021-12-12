@@ -1,5 +1,6 @@
 import pytest
 import torch
+import numpy as np
 
 from stochastic_depth_lifelong import *
 
@@ -59,7 +60,7 @@ def test_node_probs_are_correct():
 
     probs = get_node_probs(model.current_node)
     assert all(p <= prob_begin and p >= prob_end for p in probs)
-    # assert probs[-1] == prob_end
+    assert np.isclose(probs[-1], prob_end)
 
 
 def test_node_probs_with_additional_task_are_correct():
@@ -71,7 +72,7 @@ def test_node_probs_with_additional_task_are_correct():
 
     probs = get_node_probs(model.current_node)
     assert all(p <= prob_begin and p >= prob_end for p in probs)
-    # assert probs[-1] == prob_end
+    assert np.isclose(probs[-1], prob_end)
 
 
 def test_affter_adding_100_tasks_inference_is_possible():

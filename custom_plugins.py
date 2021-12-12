@@ -88,31 +88,23 @@ class BaselinePlugin(ConvertedLabelsPlugin):
 class StochasticDepthPlugin(ConvertedLabelsPlugin):
     def __init__(self, device):
         super().__init__()
-        self.tasks_paths = dict()
         self.device = device
 
     def before_training_exp(self, strategy, **kwargs):
         task_id = strategy.experience.current_experience
         self.adapt_dataloder(strategy, task_id)
 
-        current_path = [0]
-        if task_id > 0:
-            path = strategy.model.select_most_similar_task(strategy.dataloader, num_classes=10, threshold=0.6)
-            print('min entropy path = ', path)
-            strategy.model.add_new_node(path)
-            strategy.model.to(self.device)
-            current_path = strategy.model.get_current_path()
+        num_classes = len(strategy.experience.classes_in_this_experience)
+        strategy.model.update_structure(task_id, strategy.dataloader, num_classes, self.device)
 
         strategy.optimizer = optim.Adam([{'params': filter(lambda p: p.requires_grad, strategy.model.parameters())}], lr=0.0001, weight_decay=1e-6, amsgrad=False)
-
         print('training od task id = ', task_id)
-        self.tasks_paths[task_id] = current_path
 
     def before_eval_exp(self, strategy, **kwargs):
         task_id = strategy.experience.current_experience
         self.adapt_dataloder(strategy, task_id)
         print('plugin before eval, task idx = ', task_id)
-        task_path = self.tasks_paths[task_id]
+        task_path = strategy.model.tasks_paths[task_id]
         print('selected path = ', task_path)
         strategy.model.set_path(task_path)
 

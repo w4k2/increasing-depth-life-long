@@ -1,11 +1,12 @@
+import pathlib
+import tempfile
+import matplotlib.pyplot as plt
+import torch
+import seaborn as sn
+import re
 from avalanche.logging import StrategyLogger
 import mlflow
-import re
-import seaborn as sn
-import torch
-import matplotlib.pyplot as plt
-import tempfile
-import pathlib
+import mlflow.pytorch
 
 
 class MLFlowLogger(StrategyLogger):
@@ -62,3 +63,10 @@ class MLFlowLogger(StrategyLogger):
             plt.savefig(save_path)
             with mlflow.start_run(run_id=self.run_id):
                 mlflow.log_artifact(save_path, f'test_confusion_matrix')
+
+    def log_model(self, model: torch.nn.Module):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            model_path = pathlib.Path(tmpdir) / 'model.pth'
+            torch.save(model, model_path)
+            with mlflow.start_run(run_id=self.run_id):
+                mlflow.log_artifact(model_path, 'model')

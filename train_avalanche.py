@@ -1,4 +1,5 @@
 import argparse
+import tempfile
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -36,14 +37,9 @@ def main():
 
     print(results)
 
-    custom_plugin = None
-    for plugin in strategy.plugins:
-        if issubclass(type(plugin), ConvertedLabelsPlugin):
-            custom_plugin = plugin
-            break
-
-    result = compute_conf_matrix(test_stream, strategy, custom_plugin)
+    result = compute_conf_matrix(test_stream, strategy)
     mlf_logger.log_conf_matrix(result)
+    mlf_logger.log_model(strategy.model)
 
 
 def parse_args():
@@ -119,17 +115,22 @@ def get_transforms(norm_stats, use_hflip=True):
     return train_transforms, eval_transforms
 
 
-def get_method(args, device):
-    with mlflow.start_run(run_name=args.run_name):
-        mlflow.log_params(args.__dict__)
-        active_run = mlflow.active_run()
-        mlf_logger = MLFlowLogger(active_run.info.run_id)
+def get_method(args, device, use_mlflow=True):
+    loggers = [InteractiveLogger()]
+
+    mlf_logger = None
+    if use_mlflow:
+        with mlflow.start_run(run_name=args.run_name):
+            mlflow.log_params(args.__dict__)
+            active_run = mlflow.active_run()
+            mlf_logger = MLFlowLogger(active_run.info.run_id)
+            loggers.append(mlf_logger)
 
     input_channels = 1 if 'mnist' in args.dataset else 3
     evaluation_plugin = EvaluationPlugin(
         accuracy_metrics(minibatch=False, epoch=True, experience=True, stream=True),
         loss_metrics(minibatch=False, epoch=True, experience=True, stream=True),
-        loggers=[InteractiveLogger(), mlf_logger],
+        loggers=loggers,
         suppress_warnings=True)
 
     if args.method == 'baseline':
@@ -163,7 +164,13 @@ def get_base_strategy(batch_size, n_epochs, device, model, plugin, evaluation_pl
     return strategy
 
 
-def compute_conf_matrix(test_stream, strategy, custom_plugin):
+def compute_conf_matrix(test_stream, strategy):
+    custom_plugin = None
+    for plugin in strategy.plugins:
+        if issubclass(type(plugin), ConvertedLabelsPlugin):
+            custom_plugin = plugin
+            break
+
     conf_matrix_metric = StreamConfusionMatrix(absolute_class_order=False)
     num_classes_per_task = 10
     with torch.no_grad():

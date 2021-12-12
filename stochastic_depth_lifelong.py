@@ -289,6 +289,8 @@ class ResNet_StoDepth(nn.Module):
         self.current_node = None
         self.add_new_node([], freeze_previous=False)
 
+        self.tasks_paths = dict()
+
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
@@ -302,6 +304,17 @@ class ResNet_StoDepth(nn.Module):
                     nn.init.constant_(m.bn3.weight, 0)
                 elif isinstance(m, StoDepth_BasicBlock):
                     nn.init.constant_(m.bn2.weight, 0)
+
+    def update_structure(self, task_id, dataloader, num_classes, device):
+        current_path = [0]
+        if task_id > 0:
+            path = self.select_most_similar_task(dataloader, num_classes=num_classes, device=device, threshold=0.6)
+            print('min entropy path = ', path)
+            self.add_new_node(path)
+            self.to(device)
+            current_path = self.get_current_path()
+
+        self.tasks_paths[task_id] = current_path
 
     # TODO check multFlag evaluation
     def add_new_node(self, path, freeze_previous=True):

@@ -164,7 +164,7 @@ class StoDepth_Bottleneck(nn.Module):
         return out
 
 
-def make_layer(inplanes, prob_now, prob_step, block, planes, blocks, stride=1, use_downsample=True):
+def make_layer(inplanes, block, planes, blocks, stride=1, use_downsample=True):
     layers = []
     if use_downsample:
         downsample = None
@@ -173,27 +173,23 @@ def make_layer(inplanes, prob_now, prob_step, block, planes, blocks, stride=1, u
                 conv1x1(inplanes, planes * block.expansion, stride),
                 nn.InstanceNorm2d(planes * block.expansion),
             )
-        layers.append(block(prob_now, inplanes, planes, stride, downsample))
-    prob_now = prob_now - prob_step
+        layers.append(block(1.0, inplanes, planes, stride, downsample))
     inplanes = planes * block.expansion
     for _ in range(1, blocks):
-        layers.append(block(prob_now, inplanes, planes))
-        prob_now = prob_now - prob_step
+        layers.append(block(1.0, inplanes, planes))
 
-    return nn.Sequential(*layers), inplanes, prob_now
+    return nn.Sequential(*layers), inplanes
 
 
 class Node(nn.Module):
-    def __init__(self, task_inplanes, task_base_prob, prob_step, block, layers, num_classes):
+    def __init__(self, task_inplanes, block, layers, num_classes):
         super().__init__()
         self.task_inplanes = task_inplanes
-        self.prob_step = prob_step
         self.block = block
         self.layers = layers
         self.num_classes = num_classes
-        self.layer3, inplanes, prob_now = make_layer(task_inplanes, task_base_prob, prob_step, block, 256, layers[2], use_downsample=False)
-        self.layer4, _, next_task_prob = make_layer(inplanes, prob_now, prob_step, block, 512, layers[3], stride=2)
-        self.next_task_prob = next_task_prob
+        self.layer3, inplanes = make_layer(task_inplanes, block, 256, layers[2], use_downsample=False)
+        self.layer4, _ = make_layer(inplanes, block, 512, layers[3], stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * block.expansion, num_classes)
 
@@ -214,7 +210,7 @@ class Node(nn.Module):
 
     def add_new_leaf(self, path, num_classes):
         if self.current_child == None or len(path) == 0:
-            node = Node(self.task_inplanes, self.next_task_prob, self.prob_step, self.block, self.layers, num_classes)
+            node = Node(self.task_inplanes, self.block, self.layers, num_classes)
             self.current_child = node
             self.all_children.append(node)
         else:
@@ -266,7 +262,7 @@ class Node(nn.Module):
 
 class ResNet_StoDepth(nn.Module):
 
-    def __init__(self, block, prob_begin, prob_end, layers, max_depth=100, num_classes=1000, input_channels=3, zero_init_residual=False):
+    def __init__(self, block, prob_begin, prob_end, layers, num_classes=1000, input_channels=3, zero_init_residual=False):
         super().__init__()
         inplanes = 64
         self.conv1 = nn.Conv2d(input_channels, 64, kernel_size=7, stride=2, padding=3,
@@ -278,18 +274,13 @@ class ResNet_StoDepth(nn.Module):
         self.prob_begin = prob_begin
         self.prob_end = prob_end
 
-        prob_now = prob_begin
-        prob_delta = prob_begin - prob_end
-        self.prob_step = prob_delta / (sum(layers)*max_depth - 1)
-
-        self.layer1, inplanes, prob_now = make_layer(inplanes, prob_now, self.prob_step, block, 64, layers[0])
-        self.layer2, inplanes, prob_now = make_layer(inplanes, prob_now, self.prob_step, block, 128, layers[1], stride=2)
+        self.layer1, inplanes = make_layer(inplanes, block, 64, layers[0])
+        self.layer2, inplanes = make_layer(inplanes, block, 128, layers[1], stride=2)
         downsample = nn.Sequential(
             conv1x1(inplanes, 256 * block.expansion, stride=2),
             nn.InstanceNorm2d(256 * block.expansion),
         )
-        self.downsample_block = block(prob_now, inplanes, planes=256, stride=2, downsample=downsample)
-        self.task_base_prob = prob_now - self.prob_step
+        self.downsample_block = block(1.0, inplanes, planes=256, stride=2, downsample=downsample)
         self.task_inplanes = inplanes
 
         self.block = block
@@ -297,7 +288,7 @@ class ResNet_StoDepth(nn.Module):
 
         self.nodes = nn.ModuleList([])
         self.current_node = None
-        self.add_first_node(num_classes=num_classes)
+        self.add_new_node([], freeze_previous=False, num_classes=num_classes)
 
         self.tasks_paths = dict()
 
@@ -315,12 +306,6 @@ class ResNet_StoDepth(nn.Module):
                 elif isinstance(m, StoDepth_BasicBlock):
                     nn.init.constant_(m.bn2.weight, 0)
 
-    def add_first_node(self, num_classes):
-        node = Node(self.task_inplanes, self.task_base_prob, self.prob_step, self.block, self.layers, num_classes)
-        self.current_node = node
-        self.nodes.append(node)
-        self.update_probs()
-
     def update_structure(self, task_id, dataloader, num_classes, device):
         current_path = [0]
         if task_id > 0:
@@ -332,13 +317,19 @@ class ResNet_StoDepth(nn.Module):
 
         self.tasks_paths[task_id] = current_path
 
-    def add_new_node(self, path, num_classes):
-        for param in self.parameters():
-            param.requires_grad = False
-            param.grad = None
+    def add_new_node(self, path, num_classes, freeze_previous=True):
+        if freeze_previous:
+            for param in self.parameters():
+                param.requires_grad = False
+                param.grad = None
 
-        self.set_path(path)
-        self.current_node.add_new_leaf(path[1:], num_classes)
+        if len(path) == 0:
+            node = Node(self.task_inplanes, self.block, self.layers, num_classes)
+            self.current_node = node
+            self.nodes.append(node)
+        else:
+            self.set_path(path)
+            self.current_node.add_new_leaf(path[1:], num_classes)
         self.update_probs()
 
     def select_most_similar_task(self, dataloder, num_classes, device='cuda', threshold=0.5):
@@ -388,7 +379,6 @@ class ResNet_StoDepth(nn.Module):
         entropy = - torch.sum(log_p * p, dim=1)
         return entropy
 
-    # TODO: update probs
     def set_path(self, path):
         self.current_node = self.nodes[path[0]]
         self.current_node.set_path(path[1:])

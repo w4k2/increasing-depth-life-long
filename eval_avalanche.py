@@ -2,7 +2,7 @@ import pathlib
 import argparse
 import torch
 
-from train_avalanche import get_data, get_method
+from train_avalanche import get_data, get_method, compute_conf_matrix
 
 
 def main():
@@ -15,6 +15,9 @@ def main():
 
     res = strategy.eval(test_stream)
     print(res)
+
+    conf_mat = compute_conf_matrix(test_stream, strategy)
+    print(conf_mat)
 
 
 def parse_args():

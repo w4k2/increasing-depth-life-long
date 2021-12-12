@@ -182,11 +182,11 @@ def compute_conf_matrix(test_stream, strategy):
     num_classes_per_task = 10
     with torch.no_grad():
         for i, strategy.experience in enumerate(test_stream):
-            class_mapping = custom_plugin.task_label_mappings[i]
             strategy.eval_dataset_adaptation()
             strategy.make_eval_dataloader()
             strategy.model = strategy.model_adaptation()
 
+            class_mapping = custom_plugin.get_label_mapping(strategy.dataloader.dataset, i)
             for strategy.mbatch in strategy.dataloader:
                 getattr(strategy, '_unpack_minibatch')()
                 mb_output = strategy.forward()
@@ -196,8 +196,9 @@ def compute_conf_matrix(test_stream, strategy):
                 mb_y = strategy.mb_y
                 mb_y = torch.Tensor([class_mapping[l.item()] for l in mb_y])
                 mb_y += i * num_classes_per_task
+                mb_y = mb_y.to(torch.long)
 
-                conf_matrix_metric.update(strategy.mb_y, new_output)
+                conf_matrix_metric.update(mb_y, new_output)
 
     result = conf_matrix_metric.result()
     return result

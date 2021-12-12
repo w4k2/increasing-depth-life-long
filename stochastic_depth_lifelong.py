@@ -221,13 +221,13 @@ class Node(nn.Module):
 
         return x, feature_maps
 
-    def add_new_leaf(self, path):
+    def add_new_leaf(self, path, num_classes):
         if self.current_child == None or len(path) == 0:
-            node = Node(self.task_inplanes, self.multFlag, self.next_task_prob, self.prob_step, self.block, self.layers, self.num_classes)
+            node = Node(self.task_inplanes, self.multFlag, self.next_task_prob, self.prob_step, self.block, self.layers, num_classes)
             self.current_child = node
             self.all_children.append(node)
         else:
-            self.current_child.add_new_leaf(path[1:])
+            self.current_child.add_new_leaf(path[1:], num_classes)
 
     def get_all_paths(self):
         all_paths = []
@@ -328,7 +328,7 @@ class ResNet_StoDepth(nn.Module):
             self.nodes.append(node)
         else:
             self.set_path(path)
-            self.current_node.add_new_leaf(path[1:])
+            self.current_node.add_new_leaf(path[1:], num_classes)
 
     def select_most_similar_task(self, dataloder, num_classes, device='cuda', threshold=0.5):
         all_paths = self.get_all_paths()
@@ -459,47 +459,3 @@ def resnet152_StoDepth_lineardecay(pretrained=False, prob_begin=1, prob_end=0.5,
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet152']))
     return model
-
-
-if __name__ == '__main__':
-    model = resnet18_StoDepth_lineardecay()
-    model = model.to('cuda')
-    inp = torch.randn(1, 3, 224, 224)
-    inp = inp.to('cuda')
-
-    output = model(inp)
-    # print(output)
-
-    def print_probs(layer):
-        for i in range(len(layer)):
-            print(layer[i].prob)
-
-    for layer_name in ['layer1', 'layer2']:
-        print(layer_name)
-        layer = getattr(model, layer_name)
-        print_probs(layer)
-    print('downsample')
-    print(model.downsample_block.prob)
-
-    def print_node_probs(node):
-        print('layer 3')
-        print_probs(node.layer3)
-        print('layer 4')
-        print_probs(node.layer4)
-        if node.current_child is not None:
-            print_node_probs(node.current_child)
-
-    print_node_probs(model.current_node)
-    # print(model.state_dict())
-
-    print('new task')
-    for _ in range(100):
-        model.add_new_node()
-    print_node_probs(model.current_node)
-
-    model = model.to('cuda')
-    inp = torch.randn(32, 3, 224, 224)
-    inp = inp.to('cuda')
-    output = model(inp)
-    print(output)
-    # print(model.state_dict())

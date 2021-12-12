@@ -86,16 +86,17 @@ class BaselinePlugin(ConvertedLabelsPlugin):
 
 
 class StochasticDepthPlugin(ConvertedLabelsPlugin):
-    def __init__(self, device):
+    def __init__(self, entropy_threshold, device):
         super().__init__()
         self.device = device
+        self.entropy_threshold = entropy_threshold
 
     def before_training_exp(self, strategy, **kwargs):
         task_id = strategy.experience.current_experience
         self.adapt_dataloder(strategy, task_id)
 
         num_classes = len(strategy.experience.classes_in_this_experience)
-        strategy.model.update_structure(task_id, strategy.dataloader, num_classes, self.device)
+        strategy.model.update_structure(task_id, strategy.dataloader, num_classes, self.device, self.entropy_threshold)
 
         strategy.optimizer = optim.Adam([{'params': filter(lambda p: p.requires_grad, strategy.model.parameters())}], lr=0.0001, weight_decay=1e-6, amsgrad=False)
         print('training od task id = ', task_id)
@@ -108,5 +109,5 @@ class StochasticDepthPlugin(ConvertedLabelsPlugin):
         print('selected path = ', task_path)
         strategy.model.set_path(task_path)
 
-    def after_training_iteration(self, strategy, **kwargs):
-        strategy.stop_training()
+    # def after_training_iteration(self, strategy, **kwargs):
+    #     strategy.stop_training()

@@ -54,6 +54,8 @@ def parse_args():
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--n_epochs', default=20, type=int)
 
+    parser.add_argument('--entropy_threshold', default=0.7, type=float, help='entropy threshold for adding new node attached directly to backbone')
+
     args = parser.parse_args()
     return args
 
@@ -139,7 +141,7 @@ def get_method(args, device, use_mlflow=True):
         strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugin, evaluation_plugin)
     elif args.method == 'll-stochastic-depth':
         model = stochastic_depth_lifelong.resnet50_StoDepth_lineardecay(num_classes=10, input_channels=input_channels)
-        plugin = StochasticDepthPlugin(device)
+        plugin = StochasticDepthPlugin(args.entropy_threshold, device)
         strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugin, evaluation_plugin)
     elif args.method == 'ewc':
         # model = SimpleMLP(num_classes=10)

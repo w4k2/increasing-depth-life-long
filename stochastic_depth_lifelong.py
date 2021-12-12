@@ -306,10 +306,10 @@ class ResNet_StoDepth(nn.Module):
                 elif isinstance(m, StoDepth_BasicBlock):
                     nn.init.constant_(m.bn2.weight, 0)
 
-    def update_structure(self, task_id, dataloader, num_classes, device):
+    def update_structure(self, task_id, dataloader, num_classes, device, entropy_threshold):
         current_path = [0]
         if task_id > 0:
-            path = self.select_most_similar_task(dataloader, num_classes=num_classes, device=device, threshold=0.6)
+            path = self.select_most_similar_task(dataloader, num_classes=num_classes, device=device, threshold=entropy_threshold)
             print('min entropy path = ', path)
             self.add_new_node(path, num_classes)
             self.to(device)

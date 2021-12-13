@@ -441,7 +441,7 @@ def resnet18_StoDepth_lineardecay(pretrained=False, prob_begin=1, prob_end=0.5, 
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet_StoDepth(StoDepth_BasicBlock, prob_begin, prob_end, [4, 4, 4, 4], **kwargs)
+    model = ResNet_StoDepth(StoDepth_BasicBlock, prob_begin, prob_end, [2, 2, 2, 2], **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
     return model

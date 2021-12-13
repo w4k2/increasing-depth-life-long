@@ -145,7 +145,8 @@ def get_method(args, device, use_mlflow=True):
         plugins.append(BaselinePlugin(model, device))
         strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugins, evaluation_plugin)
     elif args.method == 'll-stochastic-depth':
-        model = stochastic_depth_lifelong.resnet50_StoDepth_lineardecay(num_classes=10, input_channels=input_channels)
+        # model = stochastic_depth_lifelong.resnet50_StoDepth_lineardecay(num_classes=10, input_channels=input_channels)
+        model = stochastic_depth_lifelong.resnet18_StoDepth_lineardecay(num_classes=10, input_channels=input_channels)
         plugins.append(StochasticDepthPlugin(args.entropy_threshold, device))
         strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugins, evaluation_plugin)
     elif args.method == 'ewc':

@@ -4,4 +4,4 @@ cifar-10-python.tar.gz
 data/
 .vscode
 *.pth
-mlruns
+mlruns/*/artifacts/model

@@ -10,16 +10,24 @@ import mlflow.pytorch
 
 
 class MLFlowLogger(StrategyLogger):
-    def __init__(self, run_id=None):
+    def __init__(self, run_id=None, experiment_name='Default'):
         super().__init__()
         self.run_id = run_id
+        self.experiment_name = experiment_name
+        client = mlflow.tracking.MlflowClient()
+        self.experiment = client.get_experiment_by_name(experiment_name)
+        if self.experiment is None:
+            id = mlflow.create_experiment(experiment_name)
+            self.experiment = client.get_experiment(id)
+        self.experiment_id = self.experiment.experiment_id
+
         if self.run_id == None:
-            mlflow.start_run()
-            active_run = mlflow.active_run()
-            self.run_id = active_run.info.run_id
+            with mlflow.start_run(experiment_id=self.experiment_id):
+                active_run = mlflow.active_run()
+                self.run_id = active_run.info.run_id
 
     def log_single_metric(self, name, value, x_plot):
-        with mlflow.start_run(run_id=self.run_id):
+        with mlflow.start_run(run_id=self.run_id, experiment_id=self.experiment_id):
             metric_name = self.map_metric_name(name)
             mlflow.log_metric(metric_name, value)
 
@@ -61,12 +69,12 @@ class MLFlowLogger(StrategyLogger):
         with tempfile.TemporaryDirectory() as tmpdir:
             save_path = pathlib.Path(tmpdir) / f"test_confusion_matrix.jpg"
             plt.savefig(save_path)
-            with mlflow.start_run(run_id=self.run_id):
+            with mlflow.start_run(run_id=self.run_id, experiment_id=self.experiment_id):
                 mlflow.log_artifact(save_path, f'test_confusion_matrix')
 
     def log_model(self, model: torch.nn.Module):
         with tempfile.TemporaryDirectory() as tmpdir:
             model_path = pathlib.Path(tmpdir) / 'model.pth'
             torch.save(model, model_path)
-            with mlflow.start_run(run_id=self.run_id):
+            with mlflow.start_run(run_id=self.run_id, experiment_id=self.experiment_id):
                 mlflow.log_artifact(model_path, 'model')

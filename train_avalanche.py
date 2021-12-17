@@ -9,7 +9,7 @@ import stochastic_depth_lifelong
 import stochastic_depth
 import mlflow
 
-from avalanche.benchmarks.classic import PermutedMNIST, SplitCIFAR100, SplitMNIST, SplitCIFAR10
+from avalanche.benchmarks.classic import PermutedMNIST, SplitCIFAR100, SplitMNIST, SplitCIFAR10, SplitTinyImageNet
 from avalanche.evaluation.metrics.confusion_matrix import StreamConfusionMatrix
 from avalanche.training.strategies import BaseStrategy, EWC
 from avalanche.models import SimpleMLP
@@ -46,6 +46,8 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--run_name', default=None, help='mlflow run name')
+    parser.add_argument('--experiment', default='Default', help='flow experiment name')
+
     parser.add_argument('--method', default='ll-stochastic-depth', choices=('baseline', 'll-stochastic-depth', 'ewc'))
     parser.add_argument('--dataset', default='cifar100', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist'))
     parser.add_argument('--device', default='cuda', type=str)
@@ -84,7 +86,7 @@ def get_data(dataset_name, seed):
     elif dataset_name == 'mnist':
         norm_stats = (0.1307,), (0.3081,)
         train_transforms, eval_transforms = get_transforms(norm_stats, use_hflip=False)
-        benchmark = SplitMNIST(n_experiences=5,
+        benchmark = SplitMNIST(n_experiences=10,
                                train_transform=train_transforms,
                                eval_transform=eval_transforms,
                                seed=seed
@@ -97,6 +99,14 @@ def get_data(dataset_name, seed):
                                   eval_transform=eval_transforms,
                                   seed=seed
                                   )
+    elif dataset_name == 'tiny-imagenet':
+        norm_stats = (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
+        train_transforms, eval_transforms = get_transforms(norm_stats)
+        benchmark = SplitTinyImageNet(n_experiences=10,
+                                      train_transform=train_transforms,
+                                      eval_transform=eval_transforms,
+                                      seed=seed
+                                      )
 
     train_stream = benchmark.train_stream
     test_stream = benchmark.test_stream
@@ -125,11 +135,8 @@ def get_method(args, device, use_mlflow=True):
 
     mlf_logger = None
     if use_mlflow:
-        with mlflow.start_run(run_name=args.run_name):
-            mlflow.log_params(args.__dict__)
-            active_run = mlflow.active_run()
-            mlf_logger = MLFlowLogger(active_run.info.run_id)
-            loggers.append(mlf_logger)
+        mlf_logger = MLFlowLogger(experiment_name=args.experiment)
+        loggers.append(mlf_logger)
 
     input_channels = 1 if 'mnist' in args.dataset else 3
     evaluation_plugin = EvaluationPlugin(

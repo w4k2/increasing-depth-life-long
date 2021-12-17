@@ -26,7 +26,7 @@ def main():
 
     device = torch.device(args.device)
     train_stream, test_stream = get_data(args.dataset, args.seed)
-    strategy, mlf_logger = get_method(args, device)
+    strategy, mlf_logger = get_method(args, device, use_mlflow=not args.debug)
 
     results = []
     for i, train_task in enumerate(train_stream):
@@ -55,6 +55,8 @@ def parse_args():
     parser.add_argument('--n_epochs', default=20, type=int)
     parser.add_argument('--debug', action='store_true', help='if true, execute only one iteration in training epoch')
 
+    parser.add_argument('--lr', default=0.0001, type=float)
+    parser.add_argument('--weight_decay', default=1e-6, type=float)
     parser.add_argument('--entropy_threshold', default=0.7, type=float, help='entropy threshold for adding new node attached directly to backbone')
 
     args = parser.parse_args()
@@ -143,12 +145,12 @@ def get_method(args, device, use_mlflow=True):
     if args.method == 'baseline':
         model = stochastic_depth.resnet50_StoDepth_lineardecay(num_classes=10)
         plugins.append(BaselinePlugin(model, device))
-        strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugins, evaluation_plugin)
+        strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugins, evaluation_plugin, args.lr, args.weight_decay)
     elif args.method == 'll-stochastic-depth':
         # model = stochastic_depth_lifelong.resnet50_StoDepth_lineardecay(num_classes=10, input_channels=input_channels)
         model = stochastic_depth_lifelong.resnet18_StoDepth_lineardecay(num_classes=10, input_channels=input_channels)
         plugins.append(StochasticDepthPlugin(args.entropy_threshold, device))
-        strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugins, evaluation_plugin)
+        strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugins, evaluation_plugin, args.lr, args.weight_decay)
     elif args.method == 'ewc':
         # model = SimpleMLP(num_classes=10)
         # model = torchvision.models.resnet18(num_classes=10)
@@ -164,8 +166,8 @@ def get_method(args, device, use_mlflow=True):
     return strategy, mlf_logger
 
 
-def get_base_strategy(batch_size, n_epochs, device, model, plugins, evaluation_plugin):
-    optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-6, amsgrad=False)
+def get_base_strategy(batch_size, n_epochs, device, model, plugins, evaluation_plugin, lr, weight_decay):
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, amsgrad=False)
     criterion = nn.CrossEntropyLoss()
     strategy = BaseStrategy(model, optimizer, criterion, train_mb_size=batch_size, eval_mb_size=batch_size,
                             train_epochs=n_epochs, plugins=plugins, device=device, evaluator=evaluation_plugin)

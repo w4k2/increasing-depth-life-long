@@ -188,10 +188,10 @@ class Node(nn.Module):
         self.block = block
         self.layers = layers
         self.num_classes = num_classes
-        self.layer3, inplanes = make_layer(task_inplanes, block, 256, layers[2], use_downsample=False)
-        self.layer4, _ = make_layer(inplanes, block, 512, layers[3], stride=2)
+        self.layer3, inplanes = make_layer(task_inplanes, block, 85, layers[2], use_downsample=False)
+        self.layer4, _ = make_layer(inplanes, block, 170, layers[3], stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(512 * block.expansion, num_classes)
+        self.fc = nn.Linear(170 * block.expansion, num_classes)
 
         self.all_children = []
         self.current_child = None
@@ -268,23 +268,23 @@ class ResNet_StoDepth(nn.Module):
 
     def __init__(self, block, prob_begin, prob_end, layers, num_classes=1000, input_channels=3, zero_init_residual=False):
         super().__init__()
-        inplanes = 64
-        self.conv1 = nn.Conv2d(input_channels, 64, kernel_size=7, stride=2, padding=3,
+        inplanes = 21
+        self.conv1 = nn.Conv2d(input_channels, 21, kernel_size=7, stride=2, padding=3,
                                bias=False)
-        self.bn1 = nn.InstanceNorm2d(64)
+        self.bn1 = nn.InstanceNorm2d(21)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
         self.prob_begin = prob_begin
         self.prob_end = prob_end
 
-        self.layer1, inplanes = make_layer(inplanes, block, 64, layers[0])
-        self.layer2, inplanes = make_layer(inplanes, block, 128, layers[1], stride=2)
+        self.layer1, inplanes = make_layer(inplanes, block, 21, layers[0])
+        self.layer2, inplanes = make_layer(inplanes, block, 42, layers[1], stride=2)
         downsample = nn.Sequential(
-            conv1x1(inplanes, 256 * block.expansion, stride=2),
-            nn.InstanceNorm2d(256 * block.expansion),
+            conv1x1(inplanes, 85 * block.expansion, stride=2),
+            nn.InstanceNorm2d(85 * block.expansion),
         )
-        self.downsample_block = block(1.0, inplanes, planes=256, stride=2, downsample=downsample)
+        self.downsample_block = block(1.0, inplanes, planes=85, stride=2, downsample=downsample)
         self.task_inplanes = inplanes
 
         self.block = block
@@ -489,3 +489,12 @@ def resnet152_StoDepth_lineardecay(pretrained=False, prob_begin=1, prob_end=0.5,
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet152']))
     return model
+
+
+if __name__ == '__main__':
+    def model_paramters(model: torch.nn.Module):
+        unique = {p.data_ptr(): p for p in model.parameters()}.values()
+        return sum(p.numel() for p in unique)
+
+    model = resnet18_StoDepth_lineardecay(num_classes=10)
+    print(model_paramters(model))

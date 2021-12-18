@@ -26,6 +26,10 @@ class MLFlowLogger(StrategyLogger):
                 active_run = mlflow.active_run()
                 self.run_id = active_run.info.run_id
 
+    def log_parameters(self, parameters: dict):
+        with mlflow.start_run(run_id=self.run_id, experiment_id=self.experiment_id):
+            mlflow.log_params(parameters)
+
     def log_single_metric(self, name, value, x_plot):
         with mlflow.start_run(run_id=self.run_id, experiment_id=self.experiment_id):
             metric_name = self.map_metric_name(name)

@@ -1,5 +1,4 @@
 import argparse
-import tempfile
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -7,7 +6,6 @@ import torchvision
 import torchvision.transforms as transf
 import stochastic_depth_lifelong
 import stochastic_depth
-import mlflow
 
 from avalanche.benchmarks.classic import PermutedMNIST, SplitCIFAR100, SplitMNIST, SplitCIFAR10, SplitTinyImageNet
 from avalanche.evaluation.metrics.confusion_matrix import StreamConfusionMatrix
@@ -139,6 +137,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
     mlf_logger = None
     if use_mlflow:
         mlf_logger = MLFlowLogger(experiment_name=args.experiment)
+        mlf_logger.log_parameters(args.__dict__)
         loggers.append(mlf_logger)
 
     input_channels = 1 if 'mnist' in args.dataset else 3

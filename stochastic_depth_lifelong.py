@@ -447,6 +447,17 @@ def resnet18_StoDepth_lineardecay(pretrained=False, prob_begin=1, prob_end=0.5, 
     return model
 
 
+def resnet9_StoDepth_lineardecay(pretrained=False, prob_begin=1, prob_end=0.5, **kwargs):
+    """Constructs a ResNet_StoDepth-18 model.
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    model = ResNet_StoDepth(StoDepth_BasicBlock, prob_begin, prob_end, [1, 1, 1, 1], **kwargs)
+    if pretrained:
+        model.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
+    return model
+
+
 def resnet34_StoDepth_lineardecay(pretrained=False, prob_begin=1, prob_end=0.5, **kwargs):
     """Constructs a ResNet_StoDepth-34 model.
     Args:

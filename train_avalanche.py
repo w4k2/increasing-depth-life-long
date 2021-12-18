@@ -48,7 +48,7 @@ def parse_args():
     parser.add_argument('--experiment', default='Default', help='flow experiment name')
 
     parser.add_argument('--method', default='ll-stochastic-depth', choices=('baseline', 'll-stochastic-depth', 'ewc'))
-    parser.add_argument('--base_model', default='resnet18', choices=('resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
+    parser.add_argument('--base_model', default='resnet18', choices=('resnet9', 'resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
     parser.add_argument('--dataset', default='cifar100', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist', 'tiny-imagenet'))
     parser.add_argument('--device', default='cuda', type=str)
     parser.add_argument('--batch_size', default=128, type=int)
@@ -189,7 +189,9 @@ def get_base_model(model_name, num_classes, input_channels):
 
 
 def get_base_model_ll(model_name, num_classes, input_channels):
-    if 'resnet18' in model_name:
+    if 'resnet9' in model_name:
+        model = stochastic_depth_lifelong.resnet9_StoDepth_lineardecay(num_classes=num_classes, input_channels=input_channels)
+    elif 'resnet18' in model_name:
         model = stochastic_depth_lifelong.resnet18_StoDepth_lineardecay(num_classes=num_classes, input_channels=input_channels)
     elif 'resnet50' in model_name:
         model = stochastic_depth_lifelong.resnet50_StoDepth_lineardecay(num_classes=num_classes, input_channels=input_channels)

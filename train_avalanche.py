@@ -30,7 +30,8 @@ def main():
 
     results = []
     for i, train_task in enumerate(train_stream):
-        strategy.train(train_task, num_workers=20)
+        eval_stream = [test_stream[i]]
+        strategy.train(train_task, eval_stream, num_workers=20)
         selected_tasks = [test_stream[j] for j in range(0, i+1)]
         eval_results = strategy.eval(selected_tasks)
         results.append(eval_results)
@@ -71,7 +72,7 @@ def get_data(dataset_name, seed):
     if dataset_name == 'cifar10':
         norm_stats = (0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)
         train_transforms, eval_transforms = get_transforms(norm_stats)
-        benchmark = SplitCIFAR10(n_experiences=2,
+        benchmark = SplitCIFAR10(n_experiences=10,
                                  train_transform=train_transforms,
                                  eval_transform=eval_transforms,
                                  seed=seed
@@ -202,7 +203,8 @@ def get_base_strategy(batch_size, n_epochs, device, model, plugins, evaluation_p
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, amsgrad=False)
     criterion = nn.CrossEntropyLoss()
     strategy = BaseStrategy(model, optimizer, criterion, train_mb_size=batch_size, eval_mb_size=batch_size,
-                            train_epochs=n_epochs, plugins=plugins, device=device, evaluator=evaluation_plugin)
+                            train_epochs=n_epochs, plugins=plugins, device=device, evaluator=evaluation_plugin,
+                            eval_every=1)
     return strategy
 
 
@@ -224,7 +226,7 @@ def compute_conf_matrix(test_stream, strategy, classes_per_task):
             for strategy.mbatch in strategy.dataloader:
                 getattr(strategy, '_unpack_minibatch')()
                 mb_output = strategy.forward()
-                new_output = torch.zeros((mb_output.shape[0], 100))
+                new_output = torch.zeros((mb_output.shape[0], 10 * classes_per_task))
                 new_output[:, i*classes_per_task:(i+1)*classes_per_task] = mb_output
 
                 mb_y = strategy.mb_y

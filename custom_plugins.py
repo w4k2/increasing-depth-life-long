@@ -110,6 +110,7 @@ class StochasticDepthPlugin(ConvertedLabelsPlugin):
         task_id = strategy.experience.current_experience
         self.adapt_dataloder(strategy, task_id)
         print('plugin before eval, task idx = ', task_id)
-        task_path = strategy.model.tasks_paths[task_id]
-        print('selected path = ', task_path)
-        strategy.model.set_path(task_path)
+        if task_id in strategy.model.tasks_paths:
+            task_path = strategy.model.tasks_paths[task_id]
+            print('selected path = ', task_path)
+            strategy.model.set_path(task_path)

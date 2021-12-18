@@ -59,9 +59,9 @@ class MLFlowLogger(StrategyLogger):
             task_id = int(task_id_str)
             new_name = f'{phase}_{metric_name}_task_{task_id}'
         elif phase == 'train':
-            new_name = f'{phase}_{metric_name}_task'
+            new_name = f'{phase}_{metric_name}'
         else:
-            new_name = f'avrg_{phase}_{metric_name}'
+            new_name = f'{phase}_{metric_name}'
         return new_name
 
     def log_conf_matrix(self, matrix: torch.Tensor):

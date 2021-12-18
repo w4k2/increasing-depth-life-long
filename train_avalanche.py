@@ -25,8 +25,8 @@ def main():
     args = parse_args()
 
     device = torch.device(args.device)
-    train_stream, test_stream = get_data(args.dataset, args.seed)
-    strategy, mlf_logger = get_method(args, device, use_mlflow=not args.debug)
+    train_stream, test_stream, classes_per_task = get_data(args.dataset, args.seed)
+    strategy, mlf_logger = get_method(args, device, classes_per_task, use_mlflow=not args.debug)
 
     results = []
     for i, train_task in enumerate(train_stream):
@@ -37,7 +37,7 @@ def main():
 
     print(results)
 
-    result = compute_conf_matrix(test_stream, strategy)
+    result = compute_conf_matrix(test_stream, strategy, classes_per_task)
     mlf_logger.log_conf_matrix(result)
     mlf_logger.log_model(strategy.model)
 
@@ -49,7 +49,8 @@ def parse_args():
     parser.add_argument('--experiment', default='Default', help='flow experiment name')
 
     parser.add_argument('--method', default='ll-stochastic-depth', choices=('baseline', 'll-stochastic-depth', 'ewc'))
-    parser.add_argument('--dataset', default='cifar100', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist'))
+    parser.add_argument('--base_model', default='resnet18', choices=('resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
+    parser.add_argument('--dataset', default='cifar100', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist', 'tiny-imagenet'))
     parser.add_argument('--device', default='cuda', type=str)
     parser.add_argument('--batch_size', default=128, type=int)
     parser.add_argument('--num_workers', default=20, type=int)
@@ -110,7 +111,8 @@ def get_data(dataset_name, seed):
 
     train_stream = benchmark.train_stream
     test_stream = benchmark.test_stream
-    return train_stream, test_stream
+    classes_per_task = benchmark.n_classes_per_exp[0]
+    return train_stream, test_stream, classes_per_task
 
 
 def get_transforms(norm_stats, use_hflip=True):
@@ -130,7 +132,7 @@ def get_transforms(norm_stats, use_hflip=True):
     return train_transforms, eval_transforms
 
 
-def get_method(args, device, use_mlflow=True):
+def get_method(args, device, classes_per_task, use_mlflow=True):
     loggers = [InteractiveLogger()]
 
     mlf_logger = None
@@ -150,27 +152,50 @@ def get_method(args, device, use_mlflow=True):
         plugins.append(DebugingPlugin())
 
     if args.method == 'baseline':
-        model = stochastic_depth.resnet50_StoDepth_lineardecay(num_classes=10)
+        model = get_base_model(args.base_model, classes_per_task, input_channels)
         plugins.append(BaselinePlugin(model, device))
         strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugins, evaluation_plugin, args.lr, args.weight_decay)
     elif args.method == 'll-stochastic-depth':
-        # model = stochastic_depth_lifelong.resnet50_StoDepth_lineardecay(num_classes=10, input_channels=input_channels)
-        model = stochastic_depth_lifelong.resnet18_StoDepth_lineardecay(num_classes=10, input_channels=input_channels)
+        model = get_base_model_ll(args.base_model, classes_per_task, input_channels)
         plugins.append(StochasticDepthPlugin(args.entropy_threshold, device))
         strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugins, evaluation_plugin, args.lr, args.weight_decay)
     elif args.method == 'ewc':
-        # model = SimpleMLP(num_classes=10)
-        # model = torchvision.models.resnet18(num_classes=10)
-        model = torchvision.models.vgg11(num_classes=10)
-        # model = stochastic_depth.resnet50_StoDepth_lineardecay(num_classes=10)
+        model = get_base_model(args.base_model, classes_per_task, input_channels)
         optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9, weight_decay=0.0)
         criterion = nn.CrossEntropyLoss()
         ewc_lambda = 100
         strategy = EWC(model, optimizer, criterion,
                        ewc_lambda=ewc_lambda, train_mb_size=args.batch_size, eval_mb_size=args.batch_size,
                        device=device, train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin)
-        # ConvertedLabelsPlugin()])
     return strategy, mlf_logger
+
+
+def get_base_model(model_name, num_classes, input_channels):
+    if model_name == 'resnet18':
+        model = torchvision.models.resnet18()
+    elif model_name == 'resnet50':
+        model = torchvision.models.resnet50()
+    elif model_name == 'resnet18-stoch':
+        model = stochastic_depth.resnet18_StoDepth_lineardecay(num_classes=num_classes)
+    elif model_name == 'resnet50=stoch':
+        model = stochastic_depth.resnet50_StoDepth_lineardecay(num_classes=num_classes)
+    elif model_name == 'vgg':
+        model = torchvision.models.vgg11(num_classes=num_classes)
+    elif model_name == 'simpleMLP':
+        model = SimpleMLP(num_classes=num_classes)
+    else:
+        raise ValueError('Invalid model name')
+    return model
+
+
+def get_base_model_ll(model_name, num_classes, input_channels):
+    if 'resnet18' in model_name:
+        model = stochastic_depth_lifelong.resnet18_StoDepth_lineardecay(num_classes=num_classes, input_channels=input_channels)
+    elif 'resnet50' in model_name:
+        model = stochastic_depth_lifelong.resnet50_StoDepth_lineardecay(num_classes=num_classes, input_channels=input_channels)
+    else:
+        raise ValueError('Invalid model name for ll-stochastic-depth method')
+    return model
 
 
 def get_base_strategy(batch_size, n_epochs, device, model, plugins, evaluation_plugin, lr, weight_decay):
@@ -181,7 +206,7 @@ def get_base_strategy(batch_size, n_epochs, device, model, plugins, evaluation_p
     return strategy
 
 
-def compute_conf_matrix(test_stream, strategy):
+def compute_conf_matrix(test_stream, strategy, classes_per_task):
     custom_plugin = None
     for plugin in strategy.plugins:
         if issubclass(type(plugin), ConvertedLabelsPlugin):
@@ -189,7 +214,6 @@ def compute_conf_matrix(test_stream, strategy):
             break
 
     conf_matrix_metric = StreamConfusionMatrix(absolute_class_order=False)
-    num_classes_per_task = 10
     with torch.no_grad():
         for i, strategy.experience in enumerate(test_stream):
             strategy.eval_dataset_adaptation()
@@ -201,11 +225,11 @@ def compute_conf_matrix(test_stream, strategy):
                 getattr(strategy, '_unpack_minibatch')()
                 mb_output = strategy.forward()
                 new_output = torch.zeros((mb_output.shape[0], 100))
-                new_output[:, i*num_classes_per_task:(i+1)*num_classes_per_task] = mb_output
+                new_output[:, i*classes_per_task:(i+1)*classes_per_task] = mb_output
 
                 mb_y = strategy.mb_y
                 mb_y = torch.Tensor([class_mapping[l.item()] for l in mb_y])
-                mb_y += i * num_classes_per_task
+                mb_y += i * classes_per_task
                 mb_y = mb_y.to(torch.long)
 
                 conf_matrix_metric.update(mb_y, new_output)

@@ -1,21 +1,22 @@
-name: stochastic-depth
+name: ll-stochastic-depth
 channels:
-    - pytorch
-    - conda-forge
-    - defaults
+  - pytorch
+  - default
 dependencies:
-    - python=3.8.5
-    - pytorch
-    - torchvision
-    - cudatoolkit=11.0
-    - numpy
-    - scikit-learn
-    - tqdm
-    - pylint
-    - autopep8
-    - rope
-    - pytorch-lightning
-    - matplotlib
-    - pandas
-    - imbalanced-learn
-    - scikit-multiflow
+  - cudatoolkit=11.3.1
+  - pytorch=1.10.0
+  - torchvision
+  - autopep8
+  - numpy
+  - matplotlib
+  - scikit-learn
+  - tqdm
+  - seaborn
+  - pylint
+  - rope
+  - mlflow
+  - seaborn
+  - pytest
+  - pip
+  - pip:
+    - git+https://github.com/ContinualAI/avalanche.git

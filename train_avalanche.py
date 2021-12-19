@@ -11,7 +11,7 @@ from avalanche.benchmarks.datasets import MNIST, FashionMNIST, CIFAR10
 from avalanche.benchmarks.generators import dataset_benchmark
 from avalanche.benchmarks.classic import PermutedMNIST, SplitCIFAR100, SplitMNIST, SplitCIFAR10, SplitTinyImageNet
 from avalanche.evaluation.metrics.confusion_matrix import StreamConfusionMatrix
-from avalanche.training.strategies import BaseStrategy, EWC
+from avalanche.training.strategies import BaseStrategy, EWC, GEM
 from avalanche.models import SimpleMLP
 from mlflow_logger import MLFlowLogger
 from avalanche.training.plugins import EvaluationPlugin
@@ -44,7 +44,8 @@ def main():
     #     result = compute_conf_matrix(test_stream, strategy, classes_per_task)
     #     mlf_logger.log_conf_matrix(result)
 
-    mlf_logger.log_model(strategy.model)
+    if mlf_logger:
+        mlf_logger.log_model(strategy.model)
 
 
 def parse_args():
@@ -53,7 +54,7 @@ def parse_args():
     parser.add_argument('--run_name', default=None, help='mlflow run name')
     parser.add_argument('--experiment', default='Default', help='flow experiment name')
 
-    parser.add_argument('--method', default='ll-stochastic-depth', choices=('baseline', 'll-stochastic-depth', 'ewc'))
+    parser.add_argument('--method', default='ll-stochastic-depth', choices=('baseline', 'll-stochastic-depth', 'ewc', 'gem'))
     parser.add_argument('--base_model', default='resnet18', choices=('resnet9', 'resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
     parser.add_argument('--dataset', default='cifar100', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist', 'tiny-imagenet', 'cifar10-mnist-fashion-mnist'))
     parser.add_argument('--n_experiences', default=10, type=int)
@@ -198,12 +199,20 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugins, evaluation_plugin, args.lr, args.weight_decay)
     elif args.method == 'ewc':
         model = get_base_model(args.base_model, classes_per_task, input_channels)
-        optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9, weight_decay=0.0)
+        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0.0)
         criterion = nn.CrossEntropyLoss()
         ewc_lambda = 100
         strategy = EWC(model, optimizer, criterion,
                        ewc_lambda=ewc_lambda, train_mb_size=args.batch_size, eval_mb_size=args.batch_size,
                        device=device, train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin)
+    elif args.method == 'gem':
+        model = get_base_model(args.base_model, classes_per_task, input_channels)
+        optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        criterion = nn.CrossEntropyLoss()
+        strategy = GEM(model, optimizer, criterion, patterns_per_exp=10,
+                       train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
+                       train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin)
+
     return strategy, mlf_logger
 
 

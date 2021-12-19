@@ -7,6 +7,8 @@ import torchvision.transforms as transf
 import stochastic_depth_lifelong
 import stochastic_depth
 
+from avalanche.benchmarks.datasets import MNIST, FashionMNIST, CIFAR10
+from avalanche.benchmarks.generators import dataset_benchmark
 from avalanche.benchmarks.classic import PermutedMNIST, SplitCIFAR100, SplitMNIST, SplitCIFAR10, SplitTinyImageNet
 from avalanche.evaluation.metrics.confusion_matrix import StreamConfusionMatrix
 from avalanche.training.strategies import BaseStrategy, EWC
@@ -53,7 +55,7 @@ def parse_args():
 
     parser.add_argument('--method', default='ll-stochastic-depth', choices=('baseline', 'll-stochastic-depth', 'ewc'))
     parser.add_argument('--base_model', default='resnet18', choices=('resnet9', 'resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
-    parser.add_argument('--dataset', default='cifar100', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist', 'tiny-imagenet'))
+    parser.add_argument('--dataset', default='cifar100', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist', 'tiny-imagenet', 'cifar10-mnist-fashion-mnist'))
     parser.add_argument('--n_experiences', default=10, type=int)
     parser.add_argument('--device', default='cuda', type=str)
     parser.add_argument('--batch_size', default=128, type=int)
@@ -112,14 +114,38 @@ def get_data(dataset_name, n_experiences, seed):
                                       eval_transform=eval_transforms,
                                       seed=seed
                                       )
+    elif dataset_name == 'cifar10-mnist-fashion-mnist':
+        cifar10_norm_stats = (0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)
+        mnist_norm_stats = (0.1307,), (0.3081,)
+        fmnist_norm_stats = (0.2860,), (0.3530,)
+
+        cifar10_train_transforms, cifar10_eval_transforms = get_transforms(cifar10_norm_stats)
+        mnist_train_transforms, mnist_eval_transforms = get_transforms(mnist_norm_stats)
+        fmnist_train_transforms, fmnist_eval_transforms = get_transforms(fmnist_norm_stats)
+
+        benchmark = dataset_benchmark(
+            [
+                CIFAR10('./data/datasets', train=True, transform=cifar10_train_transforms, download=True),
+                MNIST('./data/datasets', train=True, transform=mnist_train_transforms, download=True),
+                FashionMNIST('./data/datasets', train=True, transform=fmnist_train_transforms, download=True)
+            ],
+            [
+                CIFAR10('./data/datasets', train=False, transform=cifar10_eval_transforms, download=True),
+                MNIST('./data/datasets', train=False, transform=mnist_eval_transforms, download=True),
+                FashionMNIST('./data/datasets', train=False, transform=fmnist_eval_transforms, download=True)
+            ],
+        )
 
     train_stream = benchmark.train_stream
     test_stream = benchmark.test_stream
-    classes_per_task = benchmark.n_classes_per_exp[0]
+    try:
+        classes_per_task = benchmark.n_classes_per_exp[0]
+    except AttributeError:
+        classes_per_task = 10
     return train_stream, test_stream, classes_per_task
 
 
-def get_transforms(norm_stats, use_hflip=True):
+def get_transforms(norm_stats, use_hflip=True, stack_channels=False):
     transform_list = [
         transf.Resize((224, 224)),
         transf.ToTensor(),
@@ -127,6 +153,8 @@ def get_transforms(norm_stats, use_hflip=True):
     ]
     if use_hflip:
         transform_list.insert(0, transf.RandomHorizontalFlip(p=0.5))
+    if stack_channels:
+        transform_list.append(transf.Lambda(lambda x: torch.cat([x, x, x], dim=0)))
     train_transforms = transf.Compose(transform_list)
     eval_transforms = transf.Compose([
         transf.Resize((224, 224)),
@@ -145,7 +173,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         mlf_logger.log_parameters(args.__dict__)
         loggers.append(mlf_logger)
 
-    input_channels = 1 if 'mnist' in args.dataset else 3
+    input_channels = 1 if args.dataset in ('mnist', 'permutation-mnist') else 3
     evaluation_plugin = EvaluationPlugin(
         accuracy_metrics(minibatch=False, epoch=True, experience=True, stream=True),
         loss_metrics(minibatch=False, epoch=True, experience=True, stream=True),

@@ -1,10 +1,12 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torchvision.transforms as trans
 import torchvision.models
 from avalanche.benchmarks.classic import PermutedMNIST, SplitCIFAR100, SplitMNIST, SplitCIFAR10, SplitTinyImageNet
 from avalanche.training.strategies import BaseStrategy, EWC
 from avalanche.models import SimpleMLP
+import matplotlib.pyplot as plt
 
 from avalanche.benchmarks.generators import nc_benchmark, dataset_benchmark
 from avalanche.benchmarks.datasets import MNIST, FashionMNIST, KMNIST, EMNIST, \
@@ -22,12 +24,40 @@ def main():
     # test_stream = benchmark.test_stream
     # classes_per_task = benchmark.n_classes_per_exp[0]
 
-    train_SVHN = SVHN()
+    # train_SVHN = SVHN()
 
-    scenario_custom_task_labels = dataset_benchmark(
-        [train_MNIST_task0, train_cifar10_task1],
-        [test_MNIST_task0, test_cifar10_task1]
+    mnist_transforms = trans.Compose([trans.ToTensor(), trans.Normalize((0.1307,), (0.3081,)), trans.Lambda(lambda x: torch.cat([x, x, x], dim=0))])
+    cifar_transforms = trans.Compose([trans.ToTensor(), trans.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261))])
+
+    benchmark = dataset_benchmark(
+        [MNIST('./data/datasets', train=True, transform=mnist_transforms, download=True), CIFAR10('./data/datasets', train=True, transform=cifar_transforms, download=True)],
+        [MNIST('./data/datasets', train=True, transform=mnist_transforms, download=True), CIFAR10('./data/datasets', train=True, transform=cifar_transforms, download=True)],
+        train_transform=None,
+        eval_transform=None,
     )
+    train_stream = benchmark.train_stream
+    test_stream = benchmark.test_stream
+    classes_per_task = 10
+
+    print(dir(benchmark))
+    print('n_experiences = ', benchmark.n_experiences)
+
+    for i in range(benchmark.n_experiences):
+        test_data = test_stream[i]
+        print(dir(test_data))
+        print(test_data.dataset)
+        for j, batch in enumerate(test_data.dataset):
+            if j > 5:
+                break
+            print(batch[1])
+            # print(batch)
+            # plt.figure()
+            # plt.imshow(batch[0])
+            # break
+        print()
+
+    # plt.show()
+    # exit()
 
     # model = SimpleMLP(num_classes=classes_per_task)
     model = torchvision.models.resnet18(num_classes=classes_per_task)

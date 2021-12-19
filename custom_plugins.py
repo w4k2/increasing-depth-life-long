@@ -43,7 +43,8 @@ class ConvertedLabelsPlugin(StrategyPlugin):
         if task_id in self.task_label_mappings:
             label_mapping = self.task_label_mappings[task_id]
         else:
-            task_classes = sorted(set(dataset.targets))
+            targets = [t.item() if type(t) == torch.Tensor else t for t in dataset.targets]
+            task_classes = sorted(set(targets))
             label_mapping = {class_idx: i for i, class_idx in enumerate(task_classes)}
             self.task_label_mappings[task_id] = label_mapping
         return label_mapping

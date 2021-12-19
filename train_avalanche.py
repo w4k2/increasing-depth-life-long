@@ -38,11 +38,11 @@ def main():
 
     print(results)
 
-    if args.n_experiences * classes_per_task > 200:
-        print('to many classes, skipping confusion matrix computation')
-    else:
-        result = compute_conf_matrix(test_stream, strategy, classes_per_task)
-        mlf_logger.log_conf_matrix(result)
+    # if args.n_experiences * classes_per_task > 200:
+    #     print('to many classes, skipping confusion matrix computation')
+    # else:
+    #     result = compute_conf_matrix(test_stream, strategy, classes_per_task)
+    #     mlf_logger.log_conf_matrix(result)
 
     mlf_logger.log_model(strategy.model)
 
@@ -120,8 +120,8 @@ def get_data(dataset_name, n_experiences, seed):
         fmnist_norm_stats = (0.2860,), (0.3530,)
 
         cifar10_train_transforms, cifar10_eval_transforms = get_transforms(cifar10_norm_stats)
-        mnist_train_transforms, mnist_eval_transforms = get_transforms(mnist_norm_stats)
-        fmnist_train_transforms, fmnist_eval_transforms = get_transforms(fmnist_norm_stats)
+        mnist_train_transforms, mnist_eval_transforms = get_transforms(mnist_norm_stats, use_hflip=False, stack_channels=True)
+        fmnist_train_transforms, fmnist_eval_transforms = get_transforms(fmnist_norm_stats, use_hflip=False, stack_channels=True)
 
         benchmark = dataset_benchmark(
             [
@@ -146,21 +146,25 @@ def get_data(dataset_name, n_experiences, seed):
 
 
 def get_transforms(norm_stats, use_hflip=True, stack_channels=False):
-    transform_list = [
+    train_list = [
         transf.Resize((224, 224)),
         transf.ToTensor(),
         transf.Normalize(*norm_stats)
     ]
     if use_hflip:
-        transform_list.insert(0, transf.RandomHorizontalFlip(p=0.5))
+        train_list.insert(0, transf.RandomHorizontalFlip(p=0.5))
     if stack_channels:
-        transform_list.append(transf.Lambda(lambda x: torch.cat([x, x, x], dim=0)))
-    train_transforms = transf.Compose(transform_list)
-    eval_transforms = transf.Compose([
+        train_list.append(transf.Lambda(lambda x: torch.cat([x, x, x], dim=0)))
+    train_transforms = transf.Compose(train_list)
+
+    eval_list = [
         transf.Resize((224, 224)),
         transf.ToTensor(),
         transf.Normalize(*norm_stats)
-    ])
+    ]
+    if stack_channels:
+        eval_list.append(transf.Lambda(lambda x: torch.cat([x, x, x], dim=0)))
+    eval_transforms = transf.Compose(eval_list)
     return train_transforms, eval_transforms
 
 

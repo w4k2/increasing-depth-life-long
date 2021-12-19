@@ -23,7 +23,7 @@ def main():
     args = parse_args()
 
     device = torch.device(args.device)
-    train_stream, test_stream, classes_per_task = get_data(args.dataset, args.seed)
+    train_stream, test_stream, classes_per_task = get_data(args.dataset, args.n_experiences, args.seed)
     strategy, mlf_logger = get_method(args, device, classes_per_task, use_mlflow=not args.debug)
 
     results = []
@@ -36,8 +36,12 @@ def main():
 
     print(results)
 
-    result = compute_conf_matrix(test_stream, strategy, classes_per_task)
-    mlf_logger.log_conf_matrix(result)
+    if args.n_experiences * classes_per_task > 200:
+        print('to many classes, skipping confusion matrix computation')
+    else:
+        result = compute_conf_matrix(test_stream, strategy, classes_per_task)
+        mlf_logger.log_conf_matrix(result)
+
     mlf_logger.log_model(strategy.model)
 
 
@@ -50,6 +54,7 @@ def parse_args():
     parser.add_argument('--method', default='ll-stochastic-depth', choices=('baseline', 'll-stochastic-depth', 'ewc'))
     parser.add_argument('--base_model', default='resnet18', choices=('resnet9', 'resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
     parser.add_argument('--dataset', default='cifar100', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist', 'tiny-imagenet'))
+    parser.add_argument('--n_experiences', default=10, type=int)
     parser.add_argument('--device', default='cuda', type=str)
     parser.add_argument('--batch_size', default=128, type=int)
     parser.add_argument('--num_workers', default=20, type=int)
@@ -65,12 +70,12 @@ def parse_args():
     return args
 
 
-def get_data(dataset_name, seed):
+def get_data(dataset_name, n_experiences, seed):
     benchmark = None
     if dataset_name == 'cifar10':
         norm_stats = (0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)
         train_transforms, eval_transforms = get_transforms(norm_stats)
-        benchmark = SplitCIFAR10(n_experiences=10,
+        benchmark = SplitCIFAR10(n_experiences=n_experiences,
                                  train_transform=train_transforms,
                                  eval_transform=eval_transforms,
                                  seed=seed
@@ -78,7 +83,7 @@ def get_data(dataset_name, seed):
     elif dataset_name == 'cifar100':
         norm_stats = (0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)
         train_transforms, eval_transforms = get_transforms(norm_stats)
-        benchmark = SplitCIFAR100(n_experiences=10,
+        benchmark = SplitCIFAR100(n_experiences=n_experiences,
                                   train_transform=train_transforms,
                                   eval_transform=eval_transforms,
                                   seed=seed
@@ -86,7 +91,7 @@ def get_data(dataset_name, seed):
     elif dataset_name == 'mnist':
         norm_stats = (0.1307,), (0.3081,)
         train_transforms, eval_transforms = get_transforms(norm_stats, use_hflip=False)
-        benchmark = SplitMNIST(n_experiences=10,
+        benchmark = SplitMNIST(n_experiences=n_experiences,
                                train_transform=train_transforms,
                                eval_transform=eval_transforms,
                                seed=seed
@@ -94,7 +99,7 @@ def get_data(dataset_name, seed):
     elif dataset_name == 'permutation-mnist':
         norm_stats = (0.1307,), (0.3081,)
         train_transforms, eval_transforms = get_transforms(norm_stats, use_hflip=False)
-        benchmark = PermutedMNIST(n_experiences=10,
+        benchmark = PermutedMNIST(n_experiences=n_experiences,
                                   train_transform=train_transforms,
                                   eval_transform=eval_transforms,
                                   seed=seed
@@ -102,7 +107,7 @@ def get_data(dataset_name, seed):
     elif dataset_name == 'tiny-imagenet':
         norm_stats = (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
         train_transforms, eval_transforms = get_transforms(norm_stats)
-        benchmark = SplitTinyImageNet(n_experiences=10,
+        benchmark = SplitTinyImageNet(n_experiences=n_experiences,
                                       train_transform=train_transforms,
                                       eval_transform=eval_transforms,
                                       seed=seed

@@ -211,7 +211,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         criterion = nn.CrossEntropyLoss()
         strategy = GEM(model, optimizer, criterion, patterns_per_exp=10,
                        train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
-                       train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin)
+                       train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=1)
 
     return strategy, mlf_logger
 
@@ -223,7 +223,7 @@ def get_base_model(model_name, num_classes, input_channels):
         model = torchvision.models.resnet50()
     elif model_name == 'resnet18-stoch':
         model = stochastic_depth.resnet18_StoDepth_lineardecay(num_classes=num_classes)
-    elif model_name == 'resnet50=stoch':
+    elif model_name == 'resnet50-stoch':
         model = stochastic_depth.resnet50_StoDepth_lineardecay(num_classes=num_classes)
     elif model_name == 'vgg':
         model = torchvision.models.vgg11(num_classes=num_classes)

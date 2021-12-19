@@ -2,6 +2,7 @@ name: ll-stochastic-depth
 channels:
   - pytorch
   - default
+  - conda-forge
 dependencies:
   - cudatoolkit=11.3.1
   - pytorch=1.10.0

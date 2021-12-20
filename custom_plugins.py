@@ -37,6 +37,9 @@ class ConvertedLabelsPlugin(StrategyPlugin):
         elif type(strategy.dataloader) == torch.utils.data.DataLoader:
             label_mapping = self.get_label_mapping(strategy.adapted_dataset, task_id)
             strategy.dataloader.dataset.target_transform = Lambda(lambda l: label_mapping[l])
+        else:
+            print('else in adapt dataloader called')
+            exit()
 
     def get_label_mapping(self, dataset, task_id):
         label_mapping = dict()
@@ -61,16 +64,18 @@ class BaselinePlugin(ConvertedLabelsPlugin):
     Can be used as upper bound for performance
     """
 
-    def __init__(self, base_model, device) -> None:
+    def __init__(self, model_creation_fn, classes_per_task, device) -> None:
         super().__init__()
-        self.base_model = base_model
+        self.model_creation_fn = model_creation_fn
         self.device = device
+        self.classes_per_task = classes_per_task
         self.task_models = []
 
     def before_training_exp(self, strategy, **kwargs):
         super().before_training_exp(strategy)
 
-        strategy.model = copy.deepcopy(self.base_model)
+        task_id = strategy.experience.current_experience
+        strategy.model = self.model_creation_fn(num_classes=self.classes_per_task[task_id])
         strategy.model.to(self.device)
         strategy.make_optimizer()
 

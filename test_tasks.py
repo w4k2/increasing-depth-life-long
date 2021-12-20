@@ -17,16 +17,72 @@ from avalanche.benchmarks.datasets import MNIST, FashionMNIST, KMNIST, EMNIST, \
 
 
 def main():
-    benchmark = CORe50(scenario="nc")  # scenarios: 'ni', 'nc', 'nic', 'nicv2_79', 'nicv2_196' or 'nicv2_391'
+    benchmark = CORe50(scenario="nic")  # scenarios: 'ni', 'nc', 'nic', 'nicv2_79', 'nicv2_196' or 'nicv2_391'
     # classes_per_task = benchmark.n_classes_per_exp[0]
     # print(classes_per_task)
 
     train_stream = benchmark.train_stream
     test_stream = benchmark.test_stream
+    new_test_stream = []
 
     for i in range(benchmark.n_experiences):
-        data = train_stream[i]
-        print(len(data.dataset))
+        print('train')
+        train_data = train_stream[i]
+        print(train_data)
+        # print(dir(train_data))
+        print(train_data.classes_in_this_experience)
+        print(len(train_data.dataset))
+
+        classes_in_exp = train_data.classes_in_this_experience
+        classes_in_exp = set(classes_in_exp)
+        # classes_in_exp = torch.Tensor(classes_in_exp)
+
+        print('test')
+        test_data = test_stream[0]
+        # print(dir(test_data))
+        # print(test_data)
+        # # print(dir(test_data))
+        # print(test_data.classes_in_this_experience)
+        # print(len(test_data.dataset))
+
+        # print(test_data.dataset)
+        # print(dir(test_data.dataset))
+        # print(test_data.dataset._dataset)
+        # print(dir(test_data.dataset._dataset))
+        # print(test_data.dataset._dataset._dataset)
+
+        # print(test_data.dataset._dataset._dataset)
+        # print(test_data.dataset._dataset._dataset.targets)
+        # targets = test_data.dataset._dataset._dataset.targets
+        # targets = torch.Tensor(targets)
+        # print(targets.shape)
+        # print(classes_in_exp.expand(targets.shape[0], classes_in_exp.shape[0]).shape)
+        # idx = (targets.unsqueeze(1) == classes_in_exp.expand(targets.shape[0], classes_in_exp.shape[0])).any(axis=1)
+        # print(idx.shape)
+        # print(idx)
+
+        images = []
+        targets = []
+        for img, t in zip(test_data.dataset._dataset._dataset.imgs, test_data.dataset._dataset._dataset.targets):
+            if t in classes_in_exp:
+                images.append(img)
+                targets.append(t)
+
+        test_data.dataset._dataset._dataset.imgs = images
+        test_data.dataset._dataset._dataset.targets = targets
+        test_data.classes_in_this_experience = classes_in_exp
+        new_test_stream.append(test_data)
+
+        # test_data.dataset._dataset._dataset.imgs = [img for img in test_data.dataset._dataset._dataset.imgs if img i]  # torch.masked_select(test_data.dataset._dataset._dataset.imgs, idx)
+        # test_data.dataset._dataset._dataset.targets =  # torch.masked_select(test_data.dataset._dataset._dataset.targets, idx)
+
+        # exit()
+
+    classes_per_task = [len(exp.classes_in_this_experience) for exp in benchmark.train_stream]
+    print(classes_per_task)
+
+    classes_per_task = [len(exp.classes_in_this_experience) for exp in new_test_stream]
+    print(classes_per_task)
 
 # def main():
 #     device = torch.device('cuda')

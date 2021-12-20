@@ -4,13 +4,14 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transf
+import functools
 import stochastic_depth_lifelong
 import stochastic_depth
 import resnet
 
 from avalanche.benchmarks.datasets import MNIST, FashionMNIST, CIFAR10
 from avalanche.benchmarks.generators import dataset_benchmark
-from avalanche.benchmarks.classic import PermutedMNIST, SplitCIFAR100, SplitMNIST, SplitCIFAR10, SplitTinyImageNet
+from avalanche.benchmarks.classic import PermutedMNIST, SplitCIFAR100, SplitMNIST, SplitCIFAR10, SplitTinyImageNet, CORe50
 from avalanche.evaluation.metrics.confusion_matrix import StreamConfusionMatrix
 from avalanche.training.strategies import BaseStrategy, EWC, GEM
 from avalanche.models import SimpleMLP
@@ -57,7 +58,7 @@ def parse_args():
 
     parser.add_argument('--method', default='ll-stochastic-depth', choices=('baseline', 'll-stochastic-depth', 'ewc', 'gem'))
     parser.add_argument('--base_model', default='resnet18', choices=('resnet9', 'resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
-    parser.add_argument('--dataset', default='cifar100', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist', 'tiny-imagenet', 'cifar10-mnist-fashion-mnist'))
+    parser.add_argument('--dataset', default='cifar100', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist', 'tiny-imagenet', 'cifar10-mnist-fashion-mnist', 'cores50'))
     parser.add_argument('--n_experiences', default=10, type=int)
     parser.add_argument('--device', default='cuda', type=str)
     parser.add_argument('--batch_size', default=128, type=int)
@@ -76,6 +77,7 @@ def parse_args():
 
 def get_data(dataset_name, n_experiences, seed):
     benchmark = None
+    test_stream = None
     if dataset_name == 'cifar10':
         norm_stats = (0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)
         train_transforms, eval_transforms = get_transforms(norm_stats)
@@ -84,6 +86,7 @@ def get_data(dataset_name, n_experiences, seed):
                                  eval_transform=eval_transforms,
                                  seed=seed
                                  )
+        classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'cifar100':
         norm_stats = (0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)
         train_transforms, eval_transforms = get_transforms(norm_stats)
@@ -92,6 +95,7 @@ def get_data(dataset_name, n_experiences, seed):
                                   eval_transform=eval_transforms,
                                   seed=seed
                                   )
+        classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'mnist':
         norm_stats = (0.1307,), (0.3081,)
         train_transforms, eval_transforms = get_transforms(norm_stats, use_hflip=False)
@@ -100,6 +104,7 @@ def get_data(dataset_name, n_experiences, seed):
                                eval_transform=eval_transforms,
                                seed=seed
                                )
+        classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'permutation-mnist':
         norm_stats = (0.1307,), (0.3081,)
         train_transforms, eval_transforms = get_transforms(norm_stats, use_hflip=False)
@@ -108,6 +113,7 @@ def get_data(dataset_name, n_experiences, seed):
                                   eval_transform=eval_transforms,
                                   seed=seed
                                   )
+        classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'tiny-imagenet':
         norm_stats = (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
         train_transforms, eval_transforms = get_transforms(norm_stats)
@@ -116,6 +122,7 @@ def get_data(dataset_name, n_experiences, seed):
                                       eval_transform=eval_transforms,
                                       seed=seed
                                       )
+        classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'cifar10-mnist-fashion-mnist':
         cifar10_norm_stats = (0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)
         mnist_norm_stats = (0.1307,), (0.3081,)
@@ -137,13 +144,35 @@ def get_data(dataset_name, n_experiences, seed):
                 FashionMNIST('./data/datasets', train=False, transform=fmnist_eval_transforms, download=True)
             ],
         )
+        classes_per_task = [10, 10, 10]
+    elif dataset_name == 'cores50':
+        norm_stats = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
+        train_transforms, eval_transforms = get_transforms(norm_stats)
+        benchmark = CORe50(scenario="nc", train_transform=train_transforms, eval_transform=eval_transforms)
+        classes_per_task = [len(exp.classes_in_this_experience) for exp in benchmark.train_stream]
+
+        test_stream = []
+        for i in range(benchmark.n_experiences):
+            train_data = benchmark.train_stream[i]
+            classes_in_exp = train_data.classes_in_this_experience
+            classes_in_exp = set(classes_in_exp)
+            test_data = benchmark.test_stream[0]
+
+            images = []
+            targets = []
+            for img, t in zip(test_data.dataset._dataset._dataset.imgs, test_data.dataset._dataset._dataset.targets):
+                if t in classes_in_exp:
+                    images.append(img)
+                    targets.append(t)
+
+            test_data.dataset._dataset._dataset.imgs = images
+            test_data.dataset._dataset._dataset.targets = targets
+            test_data.classes_in_this_experience = classes_in_exp
+            test_stream.append(test_data)
 
     train_stream = benchmark.train_stream
-    test_stream = benchmark.test_stream
-    try:
-        classes_per_task = benchmark.n_classes_per_exp[0]
-    except AttributeError:
-        classes_per_task = 10
+    if not test_stream:
+        test_stream = benchmark.test_stream
     return train_stream, test_stream, classes_per_task
 
 
@@ -191,8 +220,10 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         plugins.append(DebugingPlugin())
 
     if args.method == 'baseline':
-        model = get_base_model(args.base_model, classes_per_task, input_channels)
-        plugins.append(BaselinePlugin(model, device))
+        print('classes_per_task = ', classes_per_task)
+        model_creation_fn = functools.partial(get_base_model, model_name=args.base_model, input_channels=input_channels)
+        plugins.append(BaselinePlugin(model_creation_fn, classes_per_task, device))
+        model = get_base_model(args.base_model, classes_per_task[0], input_channels)
         strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugins, evaluation_plugin, args.lr, args.weight_decay)
     elif args.method == 'll-stochastic-depth':
         model = get_base_model_ll(args.base_model, classes_per_task, input_channels)
@@ -217,7 +248,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
     return strategy, mlf_logger
 
 
-def get_base_model(model_name, num_classes, input_channels):
+def get_base_model(model_name, num_classes=10, input_channels=3):
     if model_name == 'resnet18':
         model = resnet.resnet18(num_classes=num_classes, input_channels=input_channels)
     elif model_name == 'resnet50':

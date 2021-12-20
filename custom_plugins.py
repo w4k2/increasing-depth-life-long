@@ -85,10 +85,11 @@ class BaselinePlugin(ConvertedLabelsPlugin):
         task_id = strategy.experience.current_experience
         self.adapt_dataloder(strategy, task_id)
 
-        task_model = self.task_models[task_id]
-        task_model.to(self.device)
-        task_model = task_model.eval()
-        strategy.model = task_model
+        if task_id < len(self.task_models):
+            task_model = self.task_models[task_id]
+            task_model.to(self.device)
+            task_model = task_model.eval()
+            strategy.model = task_model
 
 
 class StochasticDepthPlugin(ConvertedLabelsPlugin):

@@ -6,6 +6,7 @@ import torchvision
 import torchvision.transforms as transf
 import stochastic_depth_lifelong
 import stochastic_depth
+import resnet
 
 from avalanche.benchmarks.datasets import MNIST, FashionMNIST, CIFAR10
 from avalanche.benchmarks.generators import dataset_benchmark
@@ -218,9 +219,9 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
 
 def get_base_model(model_name, num_classes, input_channels):
     if model_name == 'resnet18':
-        model = torchvision.models.resnet18()
+        model = resnet.resnet18(num_classes=num_classes, input_channels=input_channels)
     elif model_name == 'resnet50':
-        model = torchvision.models.resnet50()
+        model = resnet.resnet50(num_classes=num_classes, input_channels=input_channels)
     elif model_name == 'resnet18-stoch':
         model = stochastic_depth.resnet18_StoDepth_lineardecay(num_classes=num_classes)
     elif model_name == 'resnet50-stoch':

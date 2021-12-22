@@ -1,4 +1,6 @@
+from os import stat
 import torch.nn as nn
+from torch.nn.modules.instancenorm import InstanceNorm2d
 import torch.utils.model_zoo as model_zoo
 import torch
 
@@ -423,7 +425,7 @@ class ResNet_StoDepth(nn.Module):
 
     def forward(self, x):
         x = self.conv1(x)
-        x = self.bn1(x)
+        x = self.in1(x)
         x = self.relu(x)
         x = self.maxpool(x)
 
@@ -443,7 +445,14 @@ def resnet18_StoDepth_lineardecay(pretrained=False, prob_begin=1, prob_end=0.5, 
     """
     model = ResNet_StoDepth(StoDepth_BasicBlock, prob_begin, prob_end, [2, 2, 2, 2], **kwargs)
     if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['resnet18']), strict=False)
+        import torchvision
+        model_tmp = torchvision.models.resnet18(pretrained=True)
+        state_dict = model_tmp.state_dict()
+        state_dict = {key: value for key, value in state_dict.items() if key in model.state_dict() and type(model._modules[key.rsplit('.')[0]]) != InstanceNorm2d}
+        state_dict["downsample_block.conv1.weight"] = model_tmp.state_dict()['layer3.0.conv1.weight']
+        state_dict["downsample_block.conv2.weight"] = model_tmp.state_dict()['layer3.0.conv2.weight']
+        state_dict["downsample_block.downsample.0.weight"] = model_tmp.state_dict()['layer3.0.downsample.0.weight']
+        model.load_state_dict(state_dict, strict=False)
     return model
 
 
@@ -507,5 +516,5 @@ if __name__ == '__main__':
         unique = {p.data_ptr(): p for p in model.parameters()}.values()
         return sum(p.numel() for p in unique)
 
-    model = resnet18_StoDepth_lineardecay(num_classes=10)
+    model = resnet18_StoDepth_lineardecay(num_classes=10, pretrained=True)
     # print(model_paramters(model))

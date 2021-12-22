@@ -8,6 +8,7 @@ import functools
 import stochastic_depth_lifelong
 import stochastic_depth
 import resnet
+import distutils.util
 
 from avalanche.benchmarks.datasets import MNIST, FashionMNIST, CIFAR10
 from avalanche.benchmarks.generators import dataset_benchmark
@@ -58,6 +59,7 @@ def parse_args():
 
     parser.add_argument('--method', default='ll-stochastic-depth', choices=('baseline', 'll-stochastic-depth', 'ewc', 'gem'))
     parser.add_argument('--base_model', default='resnet18', choices=('resnet9', 'resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
+    parser.add_argument('--pretrained', default=True, type=distutils.util.strtobool, help='if True load weights pretrained on imagenet')
     parser.add_argument('--dataset', default='cifar100', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist', 'tiny-imagenet', 'cifar10-mnist-fashion-mnist', 'cores50'))
     parser.add_argument('--n_experiences', default=10, type=int)
     parser.add_argument('--device', default='cuda', type=str)
@@ -226,7 +228,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         model = get_base_model(args.base_model, classes_per_task[0], input_channels)
         strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugins, evaluation_plugin, args.lr, args.weight_decay)
     elif args.method == 'll-stochastic-depth':
-        model = get_base_model_ll(args.base_model, classes_per_task, input_channels)
+        model = get_base_model_ll(args.base_model, classes_per_task, input_channels, pretrained=args.pretrained)
         plugins.append(StochasticDepthPlugin(args.entropy_threshold, device))
         strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugins, evaluation_plugin, args.lr, args.weight_decay)
     elif args.method == 'ewc':
@@ -266,11 +268,11 @@ def get_base_model(model_name, num_classes=10, input_channels=3):
     return model
 
 
-def get_base_model_ll(model_name, num_classes, input_channels):
+def get_base_model_ll(model_name, num_classes, input_channels, pretrained=False):
     if 'resnet9' in model_name:
         model = stochastic_depth_lifelong.resnet9_StoDepth_lineardecay(num_classes=num_classes, input_channels=input_channels)
     elif 'resnet18' in model_name:
-        model = stochastic_depth_lifelong.resnet18_StoDepth_lineardecay(num_classes=num_classes, input_channels=input_channels)
+        model = stochastic_depth_lifelong.resnet18_StoDepth_lineardecay(num_classes=num_classes, input_channels=input_channels, pretrained=pretrained)
     elif 'resnet50' in model_name:
         model = stochastic_depth_lifelong.resnet50_StoDepth_lineardecay(num_classes=num_classes, input_channels=input_channels)
     else:

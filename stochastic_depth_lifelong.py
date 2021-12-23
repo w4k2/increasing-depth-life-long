@@ -453,7 +453,17 @@ def resnet18_StoDepth_lineardecay(pretrained=False, prob_begin=1, prob_end=0.5, 
         state_dict["downsample_block.conv2.weight"] = model_tmp.state_dict()['layer3.0.conv2.weight']
         state_dict["downsample_block.downsample.0.weight"] = model_tmp.state_dict()['layer3.0.downsample.0.weight']
         model.load_state_dict(state_dict, strict=False)
+        freeze_module(model.conv1)
+        freeze_module(model.layer1)
+        freeze_module(model.layer2)
+        freeze_module(model.downsample_block)
     return model
+
+
+def freeze_module(m):
+    for param in m.parameters():
+        param.requires_grad = False
+        param.grad = None
 
 
 def resnet9_StoDepth_lineardecay(pretrained=False, prob_begin=1, prob_end=0.5, **kwargs):

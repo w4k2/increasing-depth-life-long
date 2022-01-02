@@ -39,7 +39,7 @@ def main():
         eval_results = strategy.eval(selected_tasks)
         results.append(eval_results)
 
-    print(results)
+    #print(results)
 
     # if args.n_experiences * classes_per_task > 200:
     #     print('to many classes, skipping confusion matrix computation')

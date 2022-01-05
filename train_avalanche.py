@@ -14,7 +14,7 @@ from avalanche.benchmarks.datasets import MNIST, FashionMNIST, CIFAR10
 from avalanche.benchmarks.generators import dataset_benchmark
 from avalanche.benchmarks.classic import PermutedMNIST, SplitCIFAR100, SplitMNIST, SplitCIFAR10, SplitTinyImageNet, CORe50
 from avalanche.evaluation.metrics.confusion_matrix import StreamConfusionMatrix
-from avalanche.training.strategies import BaseStrategy, EWC, GEM
+from avalanche.training.strategies import BaseStrategy, EWC, GEM, AGEM
 from avalanche.models import SimpleMLP
 from mlflow_logger import MLFlowLogger
 from avalanche.training.plugins import EvaluationPlugin
@@ -28,7 +28,7 @@ def main():
     args = parse_args()
 
     device = torch.device(args.device)
-    train_stream, test_stream, classes_per_task = get_data(args.dataset, args.n_experiences, args.seed)
+    train_stream, test_stream, classes_per_task = get_data(args.dataset, args.n_experiences, args.seed, args.image_size)
     strategy, mlf_logger = get_method(args, device, classes_per_task, use_mlflow=not args.debug)
 
     results = []
@@ -39,7 +39,7 @@ def main():
         eval_results = strategy.eval(selected_tasks)
         results.append(eval_results)
 
-    #print(results)
+    # print(results)
 
     # if args.n_experiences * classes_per_task > 200:
     #     print('to many classes, skipping confusion matrix computation')
@@ -57,7 +57,7 @@ def parse_args():
     parser.add_argument('--run_name', default=None, help='mlflow run name')
     parser.add_argument('--experiment', default='Default', help='flow experiment name')
 
-    parser.add_argument('--method', default='ll-stochastic-depth', choices=('baseline', 'll-stochastic-depth', 'ewc', 'gem'))
+    parser.add_argument('--method', default='ll-stochastic-depth', choices=('baseline', 'll-stochastic-depth', 'ewc', 'gem', 'agem'))
     parser.add_argument('--base_model', default='resnet18', choices=('resnet9', 'resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
     parser.add_argument('--pretrained', default=True, type=distutils.util.strtobool, help='if True load weights pretrained on imagenet')
     parser.add_argument('--dataset', default='cifar100', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist', 'tiny-imagenet', 'cifar10-mnist-fashion-mnist', 'cores50'))
@@ -67,6 +67,7 @@ def parse_args():
     parser.add_argument('--num_workers', default=20, type=int)
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--n_epochs', default=20, type=int)
+    parser.add_argument('--image_size', default=128, type=int)
     parser.add_argument('--debug', action='store_true', help='if true, execute only one iteration in training epoch')
 
     parser.add_argument('--lr', default=0.0001, type=float)
@@ -77,12 +78,12 @@ def parse_args():
     return args
 
 
-def get_data(dataset_name, n_experiences, seed):
+def get_data(dataset_name, n_experiences, seed, image_size):
     benchmark = None
     test_stream = None
     if dataset_name == 'cifar10':
         norm_stats = (0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)
-        train_transforms, eval_transforms = get_transforms(norm_stats)
+        train_transforms, eval_transforms = get_transforms(norm_stats, image_size)
         benchmark = SplitCIFAR10(n_experiences=n_experiences,
                                  train_transform=train_transforms,
                                  eval_transform=eval_transforms,
@@ -91,7 +92,7 @@ def get_data(dataset_name, n_experiences, seed):
         classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'cifar100':
         norm_stats = (0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)
-        train_transforms, eval_transforms = get_transforms(norm_stats)
+        train_transforms, eval_transforms = get_transforms(norm_stats, image_size)
         benchmark = SplitCIFAR100(n_experiences=n_experiences,
                                   train_transform=train_transforms,
                                   eval_transform=eval_transforms,
@@ -100,7 +101,7 @@ def get_data(dataset_name, n_experiences, seed):
         classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'mnist':
         norm_stats = (0.1307,), (0.3081,)
-        train_transforms, eval_transforms = get_transforms(norm_stats, use_hflip=False)
+        train_transforms, eval_transforms = get_transforms(norm_stats, image_size, use_hflip=False)
         benchmark = SplitMNIST(n_experiences=n_experiences,
                                train_transform=train_transforms,
                                eval_transform=eval_transforms,
@@ -109,7 +110,7 @@ def get_data(dataset_name, n_experiences, seed):
         classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'permutation-mnist':
         norm_stats = (0.1307,), (0.3081,)
-        train_transforms, eval_transforms = get_transforms(norm_stats, use_hflip=False)
+        train_transforms, eval_transforms = get_transforms(norm_stats, image_size, use_hflip=False)
         benchmark = PermutedMNIST(n_experiences=n_experiences,
                                   train_transform=train_transforms,
                                   eval_transform=eval_transforms,
@@ -118,7 +119,7 @@ def get_data(dataset_name, n_experiences, seed):
         classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'tiny-imagenet':
         norm_stats = (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
-        train_transforms, eval_transforms = get_transforms(norm_stats)
+        train_transforms, eval_transforms = get_transforms(norm_stats, image_size)
         benchmark = SplitTinyImageNet(n_experiences=n_experiences,
                                       train_transform=train_transforms,
                                       eval_transform=eval_transforms,
@@ -130,9 +131,9 @@ def get_data(dataset_name, n_experiences, seed):
         mnist_norm_stats = (0.1307,), (0.3081,)
         fmnist_norm_stats = (0.2860,), (0.3530,)
 
-        cifar10_train_transforms, cifar10_eval_transforms = get_transforms(cifar10_norm_stats)
-        mnist_train_transforms, mnist_eval_transforms = get_transforms(mnist_norm_stats, use_hflip=False, stack_channels=True)
-        fmnist_train_transforms, fmnist_eval_transforms = get_transforms(fmnist_norm_stats, use_hflip=False, stack_channels=True)
+        cifar10_train_transforms, cifar10_eval_transforms = get_transforms(cifar10_norm_stats, image_size)
+        mnist_train_transforms, mnist_eval_transforms = get_transforms(mnist_norm_stats, image_size, use_hflip=False, stack_channels=True)
+        fmnist_train_transforms, fmnist_eval_transforms = get_transforms(fmnist_norm_stats, image_size, use_hflip=False, stack_channels=True)
 
         benchmark = dataset_benchmark(
             [
@@ -149,7 +150,7 @@ def get_data(dataset_name, n_experiences, seed):
         classes_per_task = [10, 10, 10]
     elif dataset_name == 'cores50':
         norm_stats = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
-        train_transforms, eval_transforms = get_transforms(norm_stats)
+        train_transforms, eval_transforms = get_transforms(norm_stats, image_size)
         benchmark = CORe50(scenario="nc", train_transform=train_transforms, eval_transform=eval_transforms)
         classes_per_task = [len(exp.classes_in_this_experience) for exp in benchmark.train_stream]
 
@@ -178,9 +179,9 @@ def get_data(dataset_name, n_experiences, seed):
     return train_stream, test_stream, classes_per_task
 
 
-def get_transforms(norm_stats, use_hflip=True, stack_channels=False):
+def get_transforms(norm_stats, image_size, use_hflip=True, stack_channels=False):
     train_list = [
-        transf.Resize((224, 224)),
+        transf.Resize((image_size, image_size)),
         transf.ToTensor(),
         transf.Normalize(*norm_stats)
     ]
@@ -191,7 +192,7 @@ def get_transforms(norm_stats, use_hflip=True, stack_channels=False):
     train_transforms = transf.Compose(train_list)
 
     eval_list = [
-        transf.Resize((224, 224)),
+        transf.Resize((image_size, image_size)),
         transf.ToTensor(),
         transf.Normalize(*norm_stats)
     ]
@@ -232,7 +233,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         plugins.append(StochasticDepthPlugin(args.entropy_threshold, device))
         strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugins, evaluation_plugin, args.lr, args.weight_decay)
     elif args.method == 'ewc':
-        model = get_base_model(args.base_model, classes_per_task, input_channels)
+        model = get_base_model(args.base_model, classes_per_task[0], input_channels)
         optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0.0)
         criterion = nn.CrossEntropyLoss()
         ewc_lambda = 100
@@ -240,12 +241,19 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
                        ewc_lambda=ewc_lambda, train_mb_size=args.batch_size, eval_mb_size=args.batch_size,
                        device=device, train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin)
     elif args.method == 'gem':
-        model = get_base_model(args.base_model, classes_per_task, input_channels)
+        model = get_base_model(args.base_model, classes_per_task[0], input_channels)
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         criterion = nn.CrossEntropyLoss()
         strategy = GEM(model, optimizer, criterion, patterns_per_exp=10,
                        train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
                        train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=1)
+    elif args.method == 'agem':
+        model = get_base_model(args.base_model, classes_per_task[0], input_channels)
+        optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        criterion = nn.CrossEntropyLoss()
+        strategy = AGEM(model, optimizer, criterion, patterns_per_exp=47,
+                        train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
+                        train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=1)
 
     return strategy, mlf_logger
 

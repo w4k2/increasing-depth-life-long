@@ -26,7 +26,10 @@ from custom_plugins import *
 
 def main():
     args = parse_args()
+    run_experiment(args)
 
+
+def run_experiment(args):
     device = torch.device(args.device)
     train_stream, test_stream, classes_per_task = get_data(args.dataset, args.n_experiences, args.seed, args.image_size)
     strategy, mlf_logger = get_method(args, device, classes_per_task, use_mlflow=not args.debug)
@@ -56,6 +59,7 @@ def parse_args():
 
     parser.add_argument('--run_name', default=None, help='mlflow run name')
     parser.add_argument('--experiment', default='Default', help='flow experiment name')
+    parser.add_argument('--nested_run', action='store_true', help='create nested run in mlflow')
 
     parser.add_argument('--method', default='ll-stochastic-depth', choices=('baseline', 'll-stochastic-depth', 'ewc', 'gem', 'agem'))
     parser.add_argument('--base_model', default='resnet18', choices=('resnet9', 'resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
@@ -207,7 +211,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
 
     mlf_logger = None
     if use_mlflow:
-        mlf_logger = MLFlowLogger(experiment_name=args.experiment)
+        mlf_logger = MLFlowLogger(experiment_name=args.experiment, nested=args.nested_run)
         mlf_logger.log_parameters(args.__dict__)
         loggers.append(mlf_logger)
 
@@ -246,14 +250,14 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         criterion = nn.CrossEntropyLoss()
         strategy = GEM(model, optimizer, criterion, patterns_per_exp=10,
                        train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
-                       train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=1)
+                       train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
     elif args.method == 'agem':
         model = get_base_model(args.base_model, classes_per_task[0], input_channels)
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         criterion = nn.CrossEntropyLoss()
         strategy = AGEM(model, optimizer, criterion, patterns_per_exp=47,
                         train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
-                        train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=1)
+                        train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
 
     return strategy, mlf_logger
 
@@ -293,7 +297,7 @@ def get_base_strategy(batch_size, n_epochs, device, model, plugins, evaluation_p
     criterion = nn.CrossEntropyLoss()
     strategy = BaseStrategy(model, optimizer, criterion, train_mb_size=batch_size, eval_mb_size=batch_size,
                             train_epochs=n_epochs, plugins=plugins, device=device, evaluator=evaluation_plugin,
-                            eval_every=1)
+                            eval_every=-1)
     return strategy
 
 

@@ -10,7 +10,7 @@ import mlflow.pytorch
 
 
 class MLFlowLogger(StrategyLogger):
-    def __init__(self, run_id=None, experiment_name='Default'):
+    def __init__(self, run_id=None, experiment_name='Default', nested=False):
         super().__init__()
         self.run_id = run_id
         self.experiment_name = experiment_name
@@ -20,18 +20,19 @@ class MLFlowLogger(StrategyLogger):
             id = mlflow.create_experiment(experiment_name)
             self.experiment = client.get_experiment(id)
         self.experiment_id = self.experiment.experiment_id
+        self.nested = nested
 
         if self.run_id == None:
-            with mlflow.start_run(experiment_id=self.experiment_id):
+            with mlflow.start_run(experiment_id=self.experiment_id, nested=nested):
                 active_run = mlflow.active_run()
                 self.run_id = active_run.info.run_id
 
     def log_parameters(self, parameters: dict):
-        with mlflow.start_run(run_id=self.run_id, experiment_id=self.experiment_id):
+        with mlflow.start_run(run_id=self.run_id, experiment_id=self.experiment_id, nested=self.nested):
             mlflow.log_params(parameters)
 
     def log_single_metric(self, name, value, x_plot):
-        with mlflow.start_run(run_id=self.run_id, experiment_id=self.experiment_id):
+        with mlflow.start_run(run_id=self.run_id, experiment_id=self.experiment_id, nested=self.nested):
             metric_name = self.map_metric_name(name)
             mlflow.log_metric(metric_name, value)
 

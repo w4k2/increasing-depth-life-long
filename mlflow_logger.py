@@ -86,18 +86,17 @@ class MLFlowLogger(StrategyLogger):
         artifact_location_uri = experiment.artifact_location
         # print('artifact_location = ', artifact_location_uri)
 
-        artifact_path = local_file_uri_to_path(artifact_location_uri)
-        artifact_path = pathlib.Path(artifact_path)
         # print(artifact_path)
+        repo_path = repo_dir()
+        meta_path = repo_path / 'mlruns' / f'{self.experiment_id}'
 
-        with open(artifact_path / 'meta.yaml', 'r') as file:
-            experiment_meta = yaml.load(file)
+        with open(meta_path / 'meta.yaml', 'r') as file:
+            experiment_meta = yaml.safe_load(file)
             # print('experiment_meta = ', experiment_meta)
 
-        repo_path = repo_dir()
         experiment_meta['artifact_location'] = f'file://{repo_path}/mlruns/{self.experiment_id}'
-        with open(artifact_path / 'meta.yaml', 'w') as file:
-            yaml.dump(experiment_meta, file)
+        with open(meta_path / 'meta.yaml', 'w') as file:
+            yaml.safe_dump(experiment_meta, file)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             model_path = pathlib.Path(tmpdir) / 'model.pth'
@@ -106,8 +105,8 @@ class MLFlowLogger(StrategyLogger):
                 mlflow.log_artifact(model_path, 'model')
 
         experiment_meta['artifact_location'] = artifact_location_uri
-        with open(artifact_path / 'meta.yaml', 'w') as file:
-            yaml.dump(experiment_meta, file)
+        with open(meta_path / 'meta.yaml', 'w') as file:
+            yaml.safe_dump(experiment_meta, file)
 
 
 def local_file_uri_to_path(uri):

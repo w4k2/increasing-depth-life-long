@@ -81,22 +81,16 @@ class MLFlowLogger(StrategyLogger):
                 mlflow.log_artifact(save_path, f'test_confusion_matrix')
 
     def log_model(self, model: torch.nn.Module):
-        client = mlflow.tracking.MlflowClient()
-        experiment = client.get_experiment(self.experiment_id)
-        artifact_location_uri = experiment.artifact_location
-        # print('artifact_location = ', artifact_location_uri)
-
-        # print(artifact_path)
         repo_path = repo_dir()
-        meta_path = repo_path / 'mlruns' / f'{self.experiment_id}'
+        meta_path = repo_path / 'mlruns' / f'{self.experiment_id}' / f'{self.run_id}' / 'meta.yaml'
 
-        with open(meta_path / 'meta.yaml', 'r') as file:
-            experiment_meta = yaml.safe_load(file)
-            # print('experiment_meta = ', experiment_meta)
+        with open(meta_path, 'r') as file:
+            run_meta = yaml.safe_load(file)
 
-        experiment_meta['artifact_location'] = f'file://{repo_path}/mlruns/{self.experiment_id}'
-        with open(meta_path / 'meta.yaml', 'w') as file:
-            yaml.safe_dump(experiment_meta, file)
+        artifact_uri = run_meta['artifact_uri']
+        run_meta['artifact_uri'] = f'file://{repo_path}/mlruns/{self.experiment_id}/{self.run_id}/artifacts'
+        with open(meta_path, 'w') as file:
+            yaml.safe_dump(run_meta, file)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             model_path = pathlib.Path(tmpdir) / 'model.pth'
@@ -104,9 +98,9 @@ class MLFlowLogger(StrategyLogger):
             with mlflow.start_run(run_id=self.run_id, experiment_id=self.experiment_id, nested=self.nested):
                 mlflow.log_artifact(model_path, 'model')
 
-        experiment_meta['artifact_location'] = artifact_location_uri
-        with open(meta_path / 'meta.yaml', 'w') as file:
-            yaml.safe_dump(experiment_meta, file)
+        run_meta['artifact_uri'] = artifact_uri
+        with open(meta_path, 'w') as file:
+            yaml.safe_dump(run_meta, file)
 
 
 def local_file_uri_to_path(uri):

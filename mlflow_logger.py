@@ -1,3 +1,6 @@
+import urllib
+import yaml
+import os
 import pathlib
 import tempfile
 import matplotlib.pyplot as plt
@@ -78,8 +81,47 @@ class MLFlowLogger(StrategyLogger):
                 mlflow.log_artifact(save_path, f'test_confusion_matrix')
 
     def log_model(self, model: torch.nn.Module):
+        client = mlflow.tracking.MlflowClient()
+        experiment = client.get_experiment(self.experiment_id)
+        artifact_location_uri = experiment.artifact_location
+        # print('artifact_location = ', artifact_location_uri)
+
+        artifact_path = local_file_uri_to_path(artifact_location_uri)
+        artifact_path = pathlib.Path(artifact_path)
+        # print(artifact_path)
+
+        with open(artifact_path / 'meta.yaml', 'r') as file:
+            experiment_meta = yaml.load(file)
+            # print('experiment_meta = ', experiment_meta)
+
+        repo_path = repo_dir()
+        experiment_meta['artifact_location'] = f'file://{repo_path}/mlruns/{self.experiment_id}'
+        with open(artifact_path / 'meta.yaml', 'w') as file:
+            yaml.dump(experiment_meta, file)
+
         with tempfile.TemporaryDirectory() as tmpdir:
             model_path = pathlib.Path(tmpdir) / 'model.pth'
             torch.save(model, model_path)
             with mlflow.start_run(run_id=self.run_id, experiment_id=self.experiment_id, nested=self.nested):
                 mlflow.log_artifact(model_path, 'model')
+
+        experiment_meta['artifact_location'] = artifact_location_uri
+        with open(artifact_path / 'meta.yaml', 'w') as file:
+            yaml.dump(experiment_meta, file)
+
+
+def local_file_uri_to_path(uri):
+    """
+    Convert URI to local filesystem path.
+    No-op if the uri does not have the expected scheme.
+    """
+    path = urllib.parse.urlparse(uri).path if uri.startswith("file:") else uri
+    return urllib.request.url2pathname(path)
+
+
+def repo_dir():
+    repo_dir = os.path.dirname(os.path.abspath(__file__))
+    repo_dir = pathlib.Path(repo_dir)
+    if type(repo_dir) == pathlib.WindowsPath:
+        repo_dir = pathlib.Path(*repo_dir.parts[1:]).as_posix()
+    return repo_dir

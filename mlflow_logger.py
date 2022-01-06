@@ -74,42 +74,52 @@ class MLFlowLogger(StrategyLogger):
         ax.set_xlabel('Predicted label')
         ax.set_ylabel('True label')
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            save_path = pathlib.Path(tmpdir) / f"test_confusion_matrix.jpg"
-            plt.savefig(save_path)
-            with mlflow.start_run(run_id=self.run_id, experiment_id=self.experiment_id, nested=self.nested):
-                mlflow.log_artifact(save_path, f'test_confusion_matrix')
+        with SwapArtifactUri(self.experiment_id, self.run_id):
+            with tempfile.TemporaryDirectory() as tmpdir:
+                save_path = pathlib.Path(tmpdir) / f"test_confusion_matrix.jpg"
+                plt.savefig(save_path)
+                with mlflow.start_run(run_id=self.run_id, experiment_id=self.experiment_id, nested=self.nested):
+                    mlflow.log_artifact(save_path, f'test_confusion_matrix')
 
     def log_model(self, model: torch.nn.Module):
+        with SwapArtifactUri(self.experiment_id, self.run_id):
+            with tempfile.TemporaryDirectory() as tmpdir:
+                model_path = pathlib.Path(tmpdir) / 'model.pth'
+                torch.save(model, model_path)
+                with mlflow.start_run(run_id=self.run_id, experiment_id=self.experiment_id, nested=self.nested):
+                    mlflow.log_artifact(model_path, 'model')
+
+
+class SwapArtifactUri:
+    def __init__(self, experiment_id, run_id):
+        self.experiment_id = experiment_id
+        self.run_id = run_id
+        self.artifact_uri = None
+
+    def __enter__(self):
         repo_path = repo_dir()
         meta_path = repo_path / 'mlruns' / f'{self.experiment_id}' / f'{self.run_id}' / 'meta.yaml'
 
-        with open(meta_path, 'r') as file:
-            run_meta = yaml.safe_load(file)
+        run_meta = self.load_meta(meta_path)
 
-        artifact_uri = run_meta['artifact_uri']
+        self.artifact_uri = run_meta['artifact_uri']
         run_meta['artifact_uri'] = f'file://{repo_path}/mlruns/{self.experiment_id}/{self.run_id}/artifacts'
         with open(meta_path, 'w') as file:
             yaml.safe_dump(run_meta, file)
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            model_path = pathlib.Path(tmpdir) / 'model.pth'
-            torch.save(model, model_path)
-            with mlflow.start_run(run_id=self.run_id, experiment_id=self.experiment_id, nested=self.nested):
-                mlflow.log_artifact(model_path, 'model')
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        repo_path = repo_dir()
+        meta_path = repo_path / 'mlruns' / f'{self.experiment_id}' / f'{self.run_id}' / 'meta.yaml'
 
-        run_meta['artifact_uri'] = artifact_uri
+        run_meta = self.load_meta(meta_path)
+        run_meta['artifact_uri'] = self.artifact_uri
         with open(meta_path, 'w') as file:
             yaml.safe_dump(run_meta, file)
 
-
-def local_file_uri_to_path(uri):
-    """
-    Convert URI to local filesystem path.
-    No-op if the uri does not have the expected scheme.
-    """
-    path = urllib.parse.urlparse(uri).path if uri.startswith("file:") else uri
-    return urllib.request.url2pathname(path)
+    def load_meta(self, meta_path):
+        with open(meta_path, 'r') as file:
+            run_meta = yaml.safe_load(file)
+        return run_meta
 
 
 def repo_dir():

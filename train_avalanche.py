@@ -1,4 +1,5 @@
 import argparse
+from avalanche.training.strategies.strategy_wrappers import PNNStrategy
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -61,7 +62,7 @@ def parse_args():
     parser.add_argument('--experiment', default='Default', help='flow experiment name')
     parser.add_argument('--nested_run', action='store_true', help='create nested run in mlflow')
 
-    parser.add_argument('--method', default='ll-stochastic-depth', choices=('baseline', 'll-stochastic-depth', 'ewc', 'gem', 'agem'))
+    parser.add_argument('--method', default='ll-stochastic-depth', choices=('baseline', 'll-stochastic-depth', 'ewc', 'gem', 'agem', 'pnn'))
     parser.add_argument('--base_model', default='resnet18', choices=('resnet9', 'resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
     parser.add_argument('--pretrained', default=True, type=distutils.util.strtobool, help='if True load weights pretrained on imagenet')
     parser.add_argument('--dataset', default='cifar100', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist', 'tiny-imagenet', 'cifar10-mnist-fashion-mnist', 'cores50'))
@@ -75,6 +76,7 @@ def parse_args():
     parser.add_argument('--debug', action='store_true', help='if true, execute only one iteration in training epoch')
 
     parser.add_argument('--lr', default=0.0001, type=float)
+    parser.add_argument('--momentum', default=0.8, type=float)
     parser.add_argument('--weight_decay', default=1e-6, type=float)
     parser.add_argument('--entropy_threshold', default=0.7, type=float, help='entropy threshold for adding new node attached directly to backbone')
 
@@ -100,7 +102,8 @@ def get_data(dataset_name, n_experiences, seed, image_size):
         benchmark = SplitCIFAR100(n_experiences=n_experiences,
                                   train_transform=train_transforms,
                                   eval_transform=eval_transforms,
-                                  seed=seed
+                                  seed=seed,
+                                  return_task_id=True
                                   )
         classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'mnist':
@@ -240,6 +243,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         model = get_base_model(args.base_model, classes_per_task[0], input_channels)
         optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0.0)
         criterion = nn.CrossEntropyLoss()
+        plugins.append(ConvertedLabelsPlugin())
         ewc_lambda = 100
         strategy = EWC(model, optimizer, criterion,
                        ewc_lambda=ewc_lambda, train_mb_size=args.batch_size, eval_mb_size=args.batch_size,
@@ -248,6 +252,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         model = get_base_model(args.base_model, classes_per_task[0], input_channels)
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         criterion = nn.CrossEntropyLoss()
+        plugins.append(ConvertedLabelsPlugin())
         strategy = GEM(model, optimizer, criterion, patterns_per_exp=10,
                        train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
                        train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
@@ -255,9 +260,16 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         model = get_base_model(args.base_model, classes_per_task[0], input_channels)
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         criterion = nn.CrossEntropyLoss()
-        strategy = AGEM(model, optimizer, criterion, patterns_per_exp=47,
+        plugins.append(ConvertedLabelsPlugin())
+        strategy = AGEM(model, optimizer, criterion, patterns_per_exp=65, sample_size=1300,
                         train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
                         train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
+    elif args.method == 'pnn':
+        num_channels = 1 if args.dataset in ('mnist', 'permutation-mnist') else 3
+        in_features = args.image_size * args.image_size * num_channels
+        strategy = PNNStrategy(num_layers=4, in_features=in_features, hidden_features_per_column=256,
+                               lr=args.lr, momentum=args.momentum, train_mb_size=args.batch_size, eval_mb_size=args.batch_size,
+                               train_epochs=args.n_epochs, device=device, evaluator=evaluation_plugin, eval_every=-1)
 
     return strategy, mlf_logger
 

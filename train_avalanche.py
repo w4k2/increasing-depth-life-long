@@ -274,7 +274,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         model = get_base_model(args.base_model, classes_per_task[0], input_channels)
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         criterion = nn.CrossEntropyLoss()
-        strategy = Replay(model, optimizer, criterion, mem_size=65*args.n_experiences,
+        strategy = Replay(model, optimizer, criterion, mem_size=3000*args.n_experiences,
                           train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
                           train_epochs=args.n_epochs, evaluator=evaluation_plugin, eval_every=-1)
 

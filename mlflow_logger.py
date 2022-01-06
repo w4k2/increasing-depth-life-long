@@ -74,16 +74,12 @@ class MLFlowLogger(StrategyLogger):
         with tempfile.TemporaryDirectory() as tmpdir:
             save_path = pathlib.Path(tmpdir) / f"test_confusion_matrix.jpg"
             plt.savefig(save_path)
-            with mlflow.start_run(run_id=self.run_id, experiment_id=self.experiment_id):
+            with mlflow.start_run(run_id=self.run_id, experiment_id=self.experiment_id, nested=self.nested):
                 mlflow.log_artifact(save_path, f'test_confusion_matrix')
 
     def log_model(self, model: torch.nn.Module):
         with tempfile.TemporaryDirectory() as tmpdir:
             model_path = pathlib.Path(tmpdir) / 'model.pth'
             torch.save(model, model_path)
-            run = mlflow.active_run()
-            if run == None or run.info.run_id != self.run_id:
-                with mlflow.start_run(run_id=self.run_id, experiment_id=self.experiment_id):
-                    mlflow.log_artifact(model_path, 'model')
-            else:
+            with mlflow.start_run(run_id=self.run_id, experiment_id=self.experiment_id, nested=self.nested):
                 mlflow.log_artifact(model_path, 'model')

@@ -9,7 +9,7 @@ class args:
     base_model = 'resnet18'
     pretrained = True
     dataset = 'permutation-mnist'
-    n_experiences = 10
+    n_experiences = 50
     device = 'cuda'
     batch_size = 128
     num_workers = 20

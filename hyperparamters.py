@@ -15,7 +15,7 @@ class args:
     num_workers = 20
     seed = 42
     n_epochs = 20
-    image_size = 128
+    image_size = 64
     debug = False
     lr = 0.0001
     weight_decay = 1e-6

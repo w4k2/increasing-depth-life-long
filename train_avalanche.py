@@ -15,7 +15,7 @@ from avalanche.benchmarks.datasets import MNIST, FashionMNIST, CIFAR10
 from avalanche.benchmarks.generators import dataset_benchmark
 from avalanche.benchmarks.classic import PermutedMNIST, SplitCIFAR100, SplitMNIST, SplitCIFAR10, SplitTinyImageNet, CORe50
 from avalanche.evaluation.metrics.confusion_matrix import StreamConfusionMatrix
-from avalanche.training.strategies import BaseStrategy, EWC, GEM, AGEM
+from avalanche.training.strategies import BaseStrategy, EWC, GEM, AGEM, Replay
 from avalanche.models import SimpleMLP
 from mlflow_logger import MLFlowLogger
 from avalanche.training.plugins import EvaluationPlugin
@@ -62,7 +62,7 @@ def parse_args():
     parser.add_argument('--experiment', default='Default', help='flow experiment name')
     parser.add_argument('--nested_run', action='store_true', help='create nested run in mlflow')
 
-    parser.add_argument('--method', default='ll-stochastic-depth', choices=('baseline', 'll-stochastic-depth', 'ewc', 'gem', 'agem', 'pnn'))
+    parser.add_argument('--method', default='ll-stochastic-depth', choices=('baseline', 'll-stochastic-depth', 'ewc', 'gem', 'agem', 'pnn', 'replay'))
     parser.add_argument('--base_model', default='resnet18', choices=('resnet9', 'resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
     parser.add_argument('--pretrained', default=True, type=distutils.util.strtobool, help='if True load weights pretrained on imagenet')
     parser.add_argument('--dataset', default='cifar100', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist', 'tiny-imagenet', 'cifar10-mnist-fashion-mnist', 'cores50'))
@@ -72,7 +72,7 @@ def parse_args():
     parser.add_argument('--num_workers', default=20, type=int)
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--n_epochs', default=20, type=int)
-    parser.add_argument('--image_size', default=128, type=int)
+    parser.add_argument('--image_size', default=64, type=int)
     parser.add_argument('--debug', action='store_true', help='if true, execute only one iteration in training epoch')
 
     parser.add_argument('--lr', default=0.0001, type=float)
@@ -270,6 +270,13 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         strategy = PNNStrategy(num_layers=4, in_features=in_features, hidden_features_per_column=256,
                                lr=args.lr, momentum=args.momentum, train_mb_size=args.batch_size, eval_mb_size=args.batch_size,
                                train_epochs=args.n_epochs, device=device, evaluator=evaluation_plugin, eval_every=-1)
+    elif args.method == 'replay':
+        model = get_base_model(args.base_model, classes_per_task[0], input_channels)
+        optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        criterion = nn.CrossEntropyLoss()
+        strategy = Replay(model, optimizer, criterion, mem_size=65*args.n_experiences,
+                          train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
+                          train_epochs=args.n_epochs, evaluator=evaluation_plugin, eval_every=-1)
 
     return strategy, mlf_logger
 

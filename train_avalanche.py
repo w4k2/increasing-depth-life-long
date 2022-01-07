@@ -81,6 +81,7 @@ def parse_args():
     parser.add_argument('--momentum', default=0.8, type=float)
     parser.add_argument('--weight_decay', default=1e-6, type=float)
     parser.add_argument('--entropy_threshold', default=0.7, type=float, help='entropy threshold for adding new node attached directly to backbone')  # 0.8 for cifar100
+    parser.add_argument('--update_method', default='entropy', choices=('entropy', 'sequential', 'parallel'))
 
     args = parser.parse_args()
     return args
@@ -238,7 +239,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         model = get_base_model(args.base_model, classes_per_task[0], input_channels)
         strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugins, evaluation_plugin, args.lr, args.weight_decay)
     elif args.method == 'll-stochastic-depth':
-        model = get_base_model_ll(args.base_model, classes_per_task[0], input_channels, pretrained=args.pretrained)
+        model = get_base_model_ll(args.base_model, classes_per_task[0], input_channels, pretrained=args.pretrained, update_method=args.update_method)
         plugins.append(StochasticDepthPlugin(args.entropy_threshold, device))
         strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugins, evaluation_plugin, args.lr, args.weight_decay)
     elif args.method == 'ewc':
@@ -299,13 +300,13 @@ def get_base_model(model_name, num_classes=10, input_channels=3):
     return model
 
 
-def get_base_model_ll(model_name, num_classes, input_channels, pretrained=False):
+def get_base_model_ll(model_name, num_classes, input_channels, pretrained=False, update_method='entropy'):
     if 'resnet9' in model_name:
-        model = stochastic_depth_lifelong.resnet9_StoDepth_lineardecay(num_classes=num_classes, input_channels=input_channels)
+        model = stochastic_depth_lifelong.resnet9_StoDepth_lineardecay(num_classes=num_classes, input_channels=input_channels, update_method=update_method)
     elif 'resnet18' in model_name:
-        model = stochastic_depth_lifelong.resnet18_StoDepth_lineardecay(num_classes=num_classes, input_channels=input_channels, pretrained=pretrained)
+        model = stochastic_depth_lifelong.resnet18_StoDepth_lineardecay(num_classes=num_classes, input_channels=input_channels, pretrained=pretrained, update_method=update_method)
     elif 'resnet50' in model_name:
-        model = stochastic_depth_lifelong.resnet50_StoDepth_lineardecay(num_classes=num_classes, input_channels=input_channels)
+        model = stochastic_depth_lifelong.resnet50_StoDepth_lineardecay(num_classes=num_classes, input_channels=input_channels, update_method=update_method)
     else:
         raise ValueError('Invalid model name for ll-stochastic-depth method')
     return model

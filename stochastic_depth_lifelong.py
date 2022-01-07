@@ -268,7 +268,7 @@ class Node(nn.Module):
 
 class ResNet_StoDepth(nn.Module):
 
-    def __init__(self, block, prob_begin, prob_end, layers, num_classes=1000, input_channels=3, zero_init_residual=False):
+    def __init__(self, block, prob_begin, prob_end, layers, num_classes=1000, input_channels=3, zero_init_residual=False, update_method='entropy'):
         super().__init__()
         inplanes = 64
         self.conv1 = nn.Conv2d(input_channels, 64, kernel_size=7, stride=2, padding=3,
@@ -295,6 +295,7 @@ class ResNet_StoDepth(nn.Module):
         self.nodes = nn.ModuleList([])
         self.current_node = None
         self.add_new_node([], freeze_previous=False, num_classes=num_classes)
+        self.update_method = update_method
 
         self.tasks_paths = dict()
 
@@ -315,9 +316,18 @@ class ResNet_StoDepth(nn.Module):
     def update_structure(self, task_id, dataloader, num_classes, device, entropy_threshold):
         current_path = [0]
         if task_id > 0:
-            path = self.select_most_similar_task(dataloader, num_classes=num_classes, device=device, threshold=entropy_threshold)
-            print('min entropy path = ', path)
-            self.add_new_node(path, num_classes)
+            if self.update_method == 'entropy':
+                path = self.select_most_similar_task(dataloader, num_classes=num_classes, device=device, threshold=entropy_threshold)
+                print('min entropy path = ', path)
+                self.add_new_node(path, num_classes)
+            elif self.update_method == 'sequential':
+                path = self.get_current_path()
+                self.add_new_node(path, num_classes)
+            elif self.update_method == 'parallel':
+                path = []
+                self.add_new_node(path, num_classes)
+            else:
+                raise ValueError("Invalid update method")
             self.to(device)
             current_path = self.get_current_path()
 
@@ -531,5 +541,9 @@ if __name__ == '__main__':
         unique = {p.data_ptr(): p for p in model.parameters()}.values()
         return sum(p.numel() for p in unique)
 
-    model = resnet18_StoDepth_lineardecay(num_classes=10, pretrained=True)
+    model = resnet18_StoDepth_lineardecay(num_classes=10, pretrained=True, update_method='parallel')
     # print(model_paramters(model))
+
+    for i in range(10):
+        model.update_structure(i, None, 10, 'cpu', 0.9)
+        print(model.current_depth())

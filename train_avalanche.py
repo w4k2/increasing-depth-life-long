@@ -80,7 +80,7 @@ def parse_args():
     parser.add_argument('--lr', default=0.0001, type=float)
     parser.add_argument('--momentum', default=0.8, type=float)
     parser.add_argument('--weight_decay', default=1e-6, type=float)
-    parser.add_argument('--entropy_threshold', default=0.7, type=float, help='entropy threshold for adding new node attached directly to backbone')
+    parser.add_argument('--entropy_threshold', default=0.7, type=float, help='entropy threshold for adding new node attached directly to backbone')  # 0.8 for cifar100
 
     args = parser.parse_args()
     return args

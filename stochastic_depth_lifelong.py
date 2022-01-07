@@ -325,9 +325,7 @@ class ResNet_StoDepth(nn.Module):
 
     def add_new_node(self, path, num_classes, freeze_previous=True):
         if freeze_previous:
-            for param in self.parameters():
-                param.requires_grad = False
-                param.grad = None
+            self.freeze_current_path()
 
         if len(path) == 0:
             node = Node(self.task_inplanes, self.block, self.layers, num_classes)
@@ -335,8 +333,15 @@ class ResNet_StoDepth(nn.Module):
             self.nodes.append(node)
         else:
             self.set_path(path)
+            if freeze_previous:
+                self.freeze_current_path()
             self.current_node.add_new_leaf(path[1:], num_classes)
         self.update_probs()
+
+    def freeze_current_path(self):
+        for param in self.parameters():
+            param.requires_grad = False
+            param.grad = None
 
     def select_most_similar_task(self, dataloder, num_classes, device='cuda', threshold=0.5):
         all_paths = self.get_all_paths()

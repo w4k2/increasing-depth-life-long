@@ -262,7 +262,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         model = get_base_model(args.base_model, classes_per_task[0], input_channels)
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         criterion = nn.CrossEntropyLoss()
-        strategy = AGEMModified(model, optimizer, criterion, patterns_per_exp=3000, sample_size=1300,
+        strategy = AGEMModified(model, optimizer, criterion, patterns_per_exp=3000, sample_size=3000,
                                 train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
                                 train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
     elif args.method == 'pnn':

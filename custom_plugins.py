@@ -1,8 +1,14 @@
+
 import avalanche
 import torch
 import torch.optim as optim
 import copy
 
+from avalanche.benchmarks.utils.data_loader import \
+    GroupBalancedInfiniteDataLoader
+from avalanche.training.plugins.evaluation import default_logger
+from avalanche.training.strategies.base_strategy import BaseStrategy
+from avalanche.training.plugins import AGEMPlugin
 from torchvision.transforms import Lambda
 from avalanche.training.plugins import StrategyPlugin
 
@@ -121,3 +127,52 @@ class StochasticDepthPlugin(ConvertedLabelsPlugin):
             task_path = strategy.model.tasks_paths[task_id]
             print('selected path = ', task_path)
             strategy.model.set_path(task_path)
+
+
+class AGEMPluginModified(AGEMPlugin):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @torch.no_grad()
+    def update_memory(self, dataset):
+        """
+        Update replay memory with patterns from current experience.
+        """
+        removed_els = len(dataset) - self.patterns_per_experience
+        if removed_els > 0:
+            dataset, _ = torch.utils.data.random_split(dataset,
+                                                       [self.patterns_per_experience,
+                                                        removed_els])
+        self.buffers.append(dataset)
+        self.buffer_dataloader = GroupBalancedInfiniteDataLoader(
+            self.buffers,
+            batch_size=self.sample_size // len(self.buffers),
+            num_workers=4,
+            pin_memory=False,
+            persistent_workers=False)
+        self.buffer_dliter = iter(self.buffer_dataloader)
+
+
+class AGEMModified(BaseStrategy):
+    """ Average Gradient Episodic Memory (A-GEM) strategy.
+
+    See AGEM plugin for details.
+    This strategy does not use task identities.
+    """
+
+    def __init__(self, model, optimizer, criterion,
+                 patterns_per_exp: int, sample_size: int = 64,
+                 train_mb_size: int = 1, train_epochs: int = 1,
+                 eval_mb_size: int = None, device=None,
+                 plugins=None, evaluator=default_logger, eval_every=-1):
+        agem = AGEMPlugin(patterns_per_exp, sample_size)
+        if plugins is None:
+            plugins = [agem]
+        else:
+            plugins.append(agem)
+
+        super().__init__(
+            model, optimizer, criterion,
+            train_mb_size=train_mb_size, train_epochs=train_epochs,
+            eval_mb_size=eval_mb_size, device=device, plugins=plugins,
+            evaluator=evaluator, eval_every=eval_every)

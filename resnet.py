@@ -3,7 +3,6 @@ from torch import Tensor
 import torch.nn as nn
 from typing import Type, Any, Callable, Union, List, Optional
 
-
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
            'resnet152', 'resnext50_32x4d', 'resnext101_32x8d',
            'wide_resnet50_2', 'wide_resnet101_2']
@@ -49,7 +48,7 @@ class BasicBlock(nn.Module):
     ) -> None:
         super(BasicBlock, self).__init__()
         if norm_layer is None:
-            norm_layer = nn.BatchNorm2d
+            norm_layer = nn.InstanceNorm2d
         if groups != 1 or base_width != 64:
             raise ValueError('BasicBlock only supports groups=1 and base_width=64')
         if dilation > 1:
@@ -104,7 +103,7 @@ class Bottleneck(nn.Module):
     ) -> None:
         super(Bottleneck, self).__init__()
         if norm_layer is None:
-            norm_layer = nn.BatchNorm2d
+            norm_layer = nn.InstanceNorm2d
         width = int(planes * (base_width / 64.)) * groups
         # Both self.conv2 and self.downsample layers downsample the input when stride != 1
         self.conv1 = conv1x1(inplanes, width)
@@ -156,7 +155,7 @@ class ResNet(nn.Module):
     ) -> None:
         super(ResNet, self).__init__()
         if norm_layer is None:
-            norm_layer = nn.BatchNorm2d
+            norm_layer = nn.InstanceNorm2d
         self._norm_layer = norm_layer
 
         self.inplanes = 21
@@ -188,9 +187,6 @@ class ResNet(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
-            elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
 
         # Zero-initialize the last BN in each residual branch,
         # so that the residual branch starts with zeros, and each residual block behaves like an identity.
@@ -269,8 +265,15 @@ def resnet18(pretrained: bool = False, progress: bool = True, **kwargs: Any) -> 
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return _resnet('resnet18', BasicBlock, [2, 2, 2, 2], pretrained, progress,
-                   **kwargs)
+    model = _resnet('resnet18', BasicBlock, [2, 2, 2, 2], pretrained, progress,
+                    **kwargs)
+    if pretrained:
+        import torchvision
+        model_tmp = torchvision.models.resnet18(pretrained=True)
+        state_dict = model_tmp.state_dict()
+        state_dict = {key: value for key, value in state_dict.items() if key in model.state_dict() and type(model._modules[key.rsplit('.')[0]]) != nn.InstanceNorm2d}
+        model.load_state_dict(state_dict, strict=False)
+    return model
 
 
 def resnet34(pretrained: bool = False, progress: bool = True, **kwargs: Any) -> ResNet:

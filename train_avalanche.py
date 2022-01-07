@@ -15,7 +15,7 @@ from avalanche.benchmarks.datasets import MNIST, FashionMNIST, CIFAR10
 from avalanche.benchmarks.generators import dataset_benchmark
 from avalanche.benchmarks.classic import PermutedMNIST, SplitCIFAR100, SplitMNIST, SplitCIFAR10, SplitTinyImageNet, CORe50
 from avalanche.evaluation.metrics.confusion_matrix import StreamConfusionMatrix
-from avalanche.training.strategies import BaseStrategy, EWC, GEM, AGEM, Replay
+from avalanche.training.strategies import BaseStrategy, EWC, GEM, Replay
 from avalanche.models import SimpleMLP
 from mlflow_logger import MLFlowLogger
 from avalanche.training.plugins import EvaluationPlugin
@@ -31,6 +31,8 @@ def main():
 
 
 def run_experiment(args):
+    torch.set_num_threads(1)
+
     device = torch.device(args.device)
     train_stream, test_stream, classes_per_task = get_data(args.dataset, args.n_experiences, args.seed, args.image_size)
     strategy, mlf_logger = get_method(args, device, classes_per_task, use_mlflow=not args.debug)
@@ -252,18 +254,16 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         model = get_base_model(args.base_model, classes_per_task[0], input_channels)
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         criterion = nn.CrossEntropyLoss()
-        plugins.append(ConvertedLabelsPlugin())
-        strategy = GEM(model, optimizer, criterion, patterns_per_exp=10,
+        strategy = GEM(model, optimizer, criterion, patterns_per_exp=3000,
                        train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
                        train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
     elif args.method == 'agem':
         model = get_base_model(args.base_model, classes_per_task[0], input_channels)
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         criterion = nn.CrossEntropyLoss()
-        plugins.append(ConvertedLabelsPlugin())
-        strategy = AGEM(model, optimizer, criterion, patterns_per_exp=65, sample_size=1300,
-                        train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
-                        train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
+        strategy = AGEMModified(model, optimizer, criterion, patterns_per_exp=3000, sample_size=1300,
+                                train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
+                                train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
     elif args.method == 'pnn':
         num_channels = 1 if args.dataset in ('mnist', 'permutation-mnist') else 3
         in_features = args.image_size * args.image_size * num_channels

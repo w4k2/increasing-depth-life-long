@@ -5,19 +5,20 @@ import mlflow
 class args:
     run_name = None
     experiment = 'PermutedMNIST'
-    method = 'll-stochastic-depth'
+    method = 'pnn'
     base_model = 'resnet18'
     pretrained = True
     dataset = 'permutation-mnist'
     n_experiences = 50
-    device = 'cuda'
+    device = 'cuda:1'
     batch_size = 128
-    num_workers = 20
+    num_workers = 10
     seed = 42
     n_epochs = 20
-    image_size = 64
+    image_size = 28
     debug = False
     lr = 0.0001
+    momentum = 0.8
     weight_decay = 1e-6
     entropy_threshold = 0.7
     nested_run = True

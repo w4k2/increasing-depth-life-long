@@ -5,7 +5,7 @@ import mlflow
 class args:
     run_name = None
     experiment = 'PermutedMNIST'
-    method = 'baseline'
+    method = 'll-stochastic-depth'
     base_model = 'resnet18'
     pretrained = True
     dataset = 'permutation-mnist'
@@ -21,6 +21,7 @@ class args:
     weight_decay = 1e-6
     entropy_threshold = 0.7
     nested_run = True
+    update_method = 'entropy'
 
 
 def main():
@@ -35,6 +36,7 @@ def main():
         for lr in (0.01, 0.001, 0.0008):
             for n_epochs in (1, 5, 10, 20):
                 for weight_decay in (1e-4, 1e-5, 1e-6):
+                    print(f'lr = {lr}, n_epochs = {n_epochs}, weight_decay = {weight_decay}')
                     args.run_name = f'lr={lr}, n_epochs={n_epochs}, weight_decay={weight_decay}'
                     args.lr = lr
                     args.n_epochs = n_epochs

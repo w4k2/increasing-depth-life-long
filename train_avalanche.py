@@ -111,7 +111,7 @@ def get_data(dataset_name, n_experiences, seed, image_size):
         classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'mnist':
         norm_stats = (0.1307,), (0.3081,)
-        train_transforms, eval_transforms = get_transforms(norm_stats, image_size, use_hflip=False)
+        train_transforms, eval_transforms = get_transforms(norm_stats, image_size, use_hflip=False, stack_channels=True)
         benchmark = SplitMNIST(n_experiences=n_experiences,
                                train_transform=train_transforms,
                                eval_transform=eval_transforms,
@@ -120,7 +120,7 @@ def get_data(dataset_name, n_experiences, seed, image_size):
         classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'permutation-mnist':
         norm_stats = (0.1307,), (0.3081,)
-        train_transforms, eval_transforms = get_transforms(norm_stats, image_size, use_hflip=False)
+        train_transforms, eval_transforms = get_transforms(norm_stats, image_size, use_hflip=False, stack_channels=True)
         benchmark = PermutedMNIST(n_experiences=n_experiences,
                                   train_transform=train_transforms,
                                   eval_transform=eval_transforms,
@@ -221,7 +221,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         mlf_logger.log_parameters(args.__dict__)
         loggers.append(mlf_logger)
 
-    input_channels = 1 if args.dataset in ('mnist', 'permutation-mnist') else 3
+    input_channels = 3
     evaluation_plugin = EvaluationPlugin(
         accuracy_metrics(minibatch=False, epoch=True, experience=True, stream=True),
         loss_metrics(minibatch=False, epoch=True, experience=True, stream=True),

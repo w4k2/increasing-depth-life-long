@@ -24,7 +24,7 @@ def main():
 
 
 def get_average_accuracy(experiment_id, run_id):
-    metrics_path = pathlib.Path(f'./mlruns/{experiment_id}/{run_id}/metrics/')
+    metrics_path = pathlib.Path(f'../mlruns/{experiment_id}/{run_id}/metrics/')
 
     averaged_acc = []
 

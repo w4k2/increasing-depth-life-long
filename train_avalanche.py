@@ -17,12 +17,12 @@ from avalanche.benchmarks.classic import PermutedMNIST, SplitCIFAR100, SplitMNIS
 from avalanche.evaluation.metrics.confusion_matrix import StreamConfusionMatrix
 from avalanche.training.strategies import BaseStrategy, EWC, GEM, Replay
 from avalanche.models import SimpleMLP
-from mlflow_logger import MLFlowLogger
+from utils.mlflow_logger import MLFlowLogger
 from avalanche.training.plugins import EvaluationPlugin
 from avalanche.evaluation.metrics import accuracy_metrics, loss_metrics
 
 from avalanche.logging import InteractiveLogger
-from custom_plugins import *
+from utils.custom_plugins import *
 
 
 def main():

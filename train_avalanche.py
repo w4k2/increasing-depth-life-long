@@ -6,9 +6,9 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transf
 import functools
-import stochastic_depth_lifelong
-import stochastic_depth
-import resnet
+import models.stochastic_depth_lifelong as stochastic_depth_lifelong
+import models.stochastic_depth as stochastic_depth
+import models.resnet as resnet
 import distutils.util
 
 from avalanche.benchmarks.datasets import MNIST, FashionMNIST, CIFAR10

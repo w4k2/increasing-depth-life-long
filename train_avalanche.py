@@ -55,6 +55,7 @@ def run_experiment(args):
 
     if mlf_logger:
         mlf_logger.log_model(strategy.model)
+        mlf_logger.log_avrg_accuracy()
 
 
 def parse_args():
@@ -217,7 +218,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
 
     mlf_logger = None
     if use_mlflow:
-        mlf_logger = MLFlowLogger(experiment_name=args.experiment, nested=args.nested_run)
+        mlf_logger = MLFlowLogger(experiment_name=args.experiment, nested=args.nested_run, run_name=args.run_name)
         mlf_logger.log_parameters(args.__dict__)
         loggers.append(mlf_logger)
 
@@ -235,7 +236,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
 
     if args.method == 'baseline':
         print('classes_per_task = ', classes_per_task)
-        model_creation_fn = functools.partial(get_base_model, model_name=args.base_model, input_channels=input_channels)
+        model_creation_fn = functools.partial(get_base_model, model_name=args.base_model, input_channels=input_channels, pretrained=args.pretrained)
         plugins.append(BaselinePlugin(model_creation_fn, classes_per_task, device))
         model = get_base_model(args.base_model, classes_per_task[0], input_channels)
         strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugins, evaluation_plugin, args.lr, args.weight_decay)
@@ -244,7 +245,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         plugins.append(StochasticDepthPlugin(args.entropy_threshold, device))
         strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugins, evaluation_plugin, args.lr, args.weight_decay)
     elif args.method == 'ewc':
-        model = get_base_model(args.base_model, classes_per_task[0], input_channels)
+        model = get_base_model(args.base_model, classes_per_task[0], input_channels, pretrained=args.pretrained)
         optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0.0)
         criterion = nn.CrossEntropyLoss()
         plugins.append(ConvertedLabelsPlugin())
@@ -253,14 +254,16 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
                        ewc_lambda=ewc_lambda, train_mb_size=args.batch_size, eval_mb_size=args.batch_size,
                        device=device, train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin)
     elif args.method == 'gem':
-        model = get_base_model(args.base_model, classes_per_task[0], input_channels)
+        # model = get_base_model(args.base_model, classes_per_task[0], input_channels, pretrained=args.pretrained)
+        model = resnet.resnet18_multihead(num_classes=classes_per_task[0], input_channels=input_channels, pretrained=args.pretrained)
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         criterion = nn.CrossEntropyLoss()
         strategy = GEM(model, optimizer, criterion, patterns_per_exp=3000,
                        train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
                        train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
     elif args.method == 'agem':
-        model = get_base_model(args.base_model, classes_per_task[0], input_channels)
+        # model = get_base_model(args.base_model, classes_per_task[0], input_channels, pretrained=args.pretrained)
+        model = resnet.resnet18_multihead(num_classes=classes_per_task[0], input_channels=input_channels, pretrained=args.pretrained)
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         criterion = nn.CrossEntropyLoss()
         strategy = AGEMModified(model, optimizer, criterion, patterns_per_exp=3000, sample_size=3000,
@@ -273,7 +276,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
                                lr=args.lr, momentum=args.momentum, train_mb_size=args.batch_size, eval_mb_size=args.batch_size,
                                train_epochs=args.n_epochs, device=device, evaluator=evaluation_plugin, eval_every=-1)
     elif args.method == 'replay':
-        model = get_base_model(args.base_model, classes_per_task[0], input_channels)
+        model = get_base_model(args.base_model, classes_per_task[0], input_channels, pretrained=args.pretrained)
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         criterion = nn.CrossEntropyLoss()
         strategy = Replay(model, optimizer, criterion, mem_size=3000*args.n_experiences,
@@ -283,9 +286,9 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
     return strategy, mlf_logger
 
 
-def get_base_model(model_name, num_classes=10, input_channels=3):
+def get_base_model(model_name, num_classes=10, input_channels=3, pretrained=False):
     if model_name == 'resnet18':
-        model = resnet.resnet18(num_classes=num_classes, input_channels=input_channels)
+        model = resnet.resnet18(num_classes=num_classes, input_channels=input_channels, pretrained=pretrained)
     elif model_name == 'resnet50':
         model = resnet.resnet50(num_classes=num_classes, input_channels=input_channels)
     elif model_name == 'resnet18-stoch':

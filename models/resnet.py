@@ -1,3 +1,5 @@
+from avalanche.models import MultiHeadClassifier, MultiTaskModule
+from git import base
 import torch
 from torch import Tensor
 import torch.nn as nn
@@ -158,7 +160,7 @@ class ResNet(nn.Module):
             norm_layer = nn.InstanceNorm2d
         self._norm_layer = norm_layer
 
-        self.inplanes = 21
+        self.inplanes = 64
         self.dilation = 1
         if replace_stride_with_dilation is None:
             # each element in the tuple indicates if we should replace
@@ -272,7 +274,34 @@ def resnet18(pretrained: bool = False, progress: bool = True, **kwargs: Any) -> 
         model_tmp = torchvision.models.resnet18(pretrained=True)
         state_dict = model_tmp.state_dict()
         state_dict = {key: value for key, value in state_dict.items() if key in model.state_dict() and type(model._modules[key.rsplit('.')[0]]) != nn.InstanceNorm2d}
+        del state_dict['fc.weight']
+        del state_dict['fc.bias']
         model.load_state_dict(state_dict, strict=False)
+    return model
+
+
+class MultiHeadReducedResNet18(MultiTaskModule):
+    """
+    As from GEM paper, a smaller version of ResNet18, with three times less feature maps across all layers.
+    It employs multi-head output layer.
+    """
+
+    def __init__(self, base_model, size_before_classifier=160):
+        super().__init__()
+        self.resnet = base_model
+        self.classifier = MultiHeadClassifier(size_before_classifier)
+
+    def forward(self, x, task_labels):
+        out = self.resnet(x)
+        # out = out.view(out.size(0), -1)
+        return self.classifier(out, task_labels)
+
+
+def resnet18_multihead(**kwargs):
+    base_model = resnet18(**kwargs)
+    size_before_classifier = base_model.fc.in_features
+    base_model.fc = nn.Identity()
+    model = MultiHeadReducedResNet18(base_model, size_before_classifier)
     return model
 
 

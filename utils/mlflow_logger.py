@@ -13,7 +13,7 @@ import mlflow.pytorch
 
 
 class MLFlowLogger(StrategyLogger):
-    def __init__(self, run_id=None, experiment_name='Default', nested=False):
+    def __init__(self, run_id=None, experiment_name='Default', nested=False, run_name=None):
         super().__init__()
         self.run_id = run_id
         self.experiment_name = experiment_name
@@ -26,7 +26,7 @@ class MLFlowLogger(StrategyLogger):
         self.nested = nested
 
         if self.run_id == None:
-            with mlflow.start_run(experiment_id=self.experiment_id, nested=nested):
+            with mlflow.start_run(experiment_id=self.experiment_id, run_name=run_name, nested=nested):
                 active_run = mlflow.active_run()
                 self.run_id = active_run.info.run_id
 
@@ -89,6 +89,14 @@ class MLFlowLogger(StrategyLogger):
                 with mlflow.start_run(run_id=self.run_id, experiment_id=self.experiment_id, nested=self.nested):
                     mlflow.log_artifact(model_path, 'model')
 
+    def log_avrg_accuracy(self):
+        client = mlflow.tracking.MlflowClient()
+        run = client.get_run(self.run_id)
+        run_metrics = run.data.metrics
+        test_accs = [acc for name, acc in run_metrics.items() if name.startswith('test_accuracy_task_')]
+        test_avrg_acc = sum(test_accs) / len(test_accs)
+        client.log_metric(self.run_id, 'avrg_test_acc', test_avrg_acc)
+
 
 class SwapArtifactUri:
     def __init__(self, experiment_id, run_id):
@@ -127,4 +135,4 @@ def repo_dir():
     repo_dir = pathlib.Path(repo_dir)
     if type(repo_dir) == pathlib.WindowsPath:
         repo_dir = pathlib.Path(*repo_dir.parts[1:]).as_posix()
-    return repo_dir
+    return repo_dir.parent

@@ -5,13 +5,13 @@ import mlflow
 class args:
     run_name = None
     experiment = 'PermutedMNIST'
-    method = 'pnn'
+    method = 'agem'
     base_model = 'resnet18'
     pretrained = True
     dataset = 'permutation-mnist'
     n_experiences = 50
-    device = 'cuda:1'
-    batch_size = 128
+    device = 'cuda:0'
+    batch_size = 10
     num_workers = 10
     seed = 42
     n_epochs = 20
@@ -37,7 +37,7 @@ def main():
         for lr in (0.01, 0.001, 0.0008):
             for n_epochs in (1, 5, 10, 20):
                 for weight_decay in (1e-4, 1e-5, 1e-6):
-                    print(f'lr = {lr}, n_epochs = {n_epochs}, weight_decay = {weight_decay}')
+                    print(f'{args.method}, lr = {lr}, n_epochs = {n_epochs}, weight_decay = {weight_decay}')
                     args.run_name = f'lr={lr}, n_epochs={n_epochs}, weight_decay={weight_decay}'
                     args.lr = lr
                     args.n_epochs = n_epochs

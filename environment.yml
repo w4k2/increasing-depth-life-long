@@ -1,4 +1,4 @@
-name: ll-stochastic-depth1
+name: ll-stochastic-depth
 channels:
   - pytorch
   - default

@@ -19,7 +19,7 @@ from avalanche.training.strategies import BaseStrategy, EWC, GEM, Replay
 from avalanche.models import SimpleMLP
 from utils.mlflow_logger import MLFlowLogger
 from avalanche.training.plugins import EvaluationPlugin
-from avalanche.evaluation.metrics import accuracy_metrics, loss_metrics
+from avalanche.evaluation.metrics import accuracy_metrics, loss_metrics, forgetting_metrics
 
 from avalanche.logging import InteractiveLogger
 from utils.custom_plugins import *
@@ -224,6 +224,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
     input_channels = 3
     evaluation_plugin = EvaluationPlugin(
         accuracy_metrics(minibatch=False, epoch=True, experience=True, stream=True),
+        forgetting_metrics(experience=True, stream=True),
         loss_metrics(minibatch=False, epoch=True, experience=True, stream=True),
         loggers=loggers,
         suppress_warnings=True)

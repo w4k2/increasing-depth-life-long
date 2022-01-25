@@ -38,7 +38,7 @@ def main():
             for n_epochs in (1, 5):  # , 10, 20):
                 for weight_decay in (1e-4, 1e-5, 1e-6):
                     print(f'{args.method}, lr = {lr}, n_epochs = {n_epochs}, weight_decay = {weight_decay}')
-                    args.run_name = f'lr={lr}, n_epochs={n_epochs}, weight_decay={weight_decay}'
+                    args.run_name = f'{args.method}, lr={lr}, n_epochs={n_epochs}, weight_decay={weight_decay}'
                     args.lr = lr
                     args.n_epochs = n_epochs
                     args.weight_decay = weight_decay

@@ -44,6 +44,10 @@ def run_experiment(args):
         selected_tasks = [test_stream[j] for j in range(0, i+1)]
         eval_results = strategy.eval(selected_tasks)
         results.append(eval_results)
+        forgetting = get_forgetting(eval_results)
+        if forgetting is not None and forgetting > args.forgetting_stopping_threshold:
+            print(f'Stopping training after task {i} due to large forgetting: {forgetting}')
+            break
 
     # print(results)
 
@@ -58,6 +62,15 @@ def run_experiment(args):
         mlf_logger.log_avrg_accuracy()
 
 
+def get_forgetting(results):
+    forgetting = None
+    try:
+        forgetting = results['StreamForgetting/eval_phase/test_stream']
+    except KeyError:
+        pass
+    return forgetting
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
 
@@ -65,16 +78,16 @@ def parse_args():
     parser.add_argument('--experiment', default='Default', help='flow experiment name')
     parser.add_argument('--nested_run', action='store_true', help='create nested run in mlflow')
 
-    parser.add_argument('--method', default='ll-stochastic-depth', choices=('baseline', 'll-stochastic-depth', 'ewc', 'gem', 'agem', 'pnn', 'replay'))
+    parser.add_argument('--method', default='agem', choices=('baseline', 'll-stochastic-depth', 'ewc', 'gem', 'agem', 'pnn', 'replay'))
     parser.add_argument('--base_model', default='resnet18', choices=('resnet9', 'resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
     parser.add_argument('--pretrained', default=True, type=distutils.util.strtobool, help='if True load weights pretrained on imagenet')
-    parser.add_argument('--dataset', default='cifar100', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist', 'tiny-imagenet', 'cifar10-mnist-fashion-mnist', 'cores50'))
-    parser.add_argument('--n_experiences', default=10, type=int)
+    parser.add_argument('--dataset', default='permutation-mnist', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist', 'tiny-imagenet', 'cifar10-mnist-fashion-mnist', 'cores50'))
+    parser.add_argument('--n_experiences', default=50, type=int)
     parser.add_argument('--device', default='cuda', type=str)
-    parser.add_argument('--batch_size', default=128, type=int)
+    parser.add_argument('--batch_size', default=10, type=int)
     parser.add_argument('--num_workers', default=20, type=int)
     parser.add_argument('--seed', default=42, type=int)
-    parser.add_argument('--n_epochs', default=20, type=int)
+    parser.add_argument('--n_epochs', default=1, type=int)
     parser.add_argument('--image_size', default=64, type=int)
     parser.add_argument('--debug', action='store_true', help='if true, execute only one iteration in training epoch')
 
@@ -83,6 +96,7 @@ def parse_args():
     parser.add_argument('--weight_decay', default=1e-6, type=float)
     parser.add_argument('--entropy_threshold', default=0.7, type=float, help='entropy threshold for adding new node attached directly to backbone')  # 0.8 for cifar100
     parser.add_argument('--update_method', default='entropy', choices=('entropy', 'sequential', 'parallel'))
+    parser.add_argument('--forgetting_stopping_threshold', default=0.7, type=float)
 
     args = parser.parse_args()
     return args

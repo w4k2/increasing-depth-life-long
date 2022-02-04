@@ -2,38 +2,39 @@ import mlflow
 
 
 def main():
+    parent_run_id = '6da24a903eba4e2891d2a5e4c22b39f9'
     client = mlflow.tracking.MlflowClient('///home/jkozal/Documents/PWr/stochastic_depth/mlruns/')
 
     run_infos = client.list_run_infos('2')
-    # print(run_infos)
+    best_acc = 0.0
+    best_id = None
+
     for run_info in run_infos:
         run_id = run_info.run_id
-        print('run id = ', run_id)
         run = client.get_run(run_id)
 
         run_data = run.data
-        print(run_data)
-        print(dir(run_data))
+        if 'mlflow.parentRunId' not in run_data.tags:
+            continue
+        parent_run = run_data.tags['mlflow.parentRunId']
+        if parent_run != parent_run_id:
+            continue
 
         run_metrics = run_data.metrics
-        print(run_metrics)
-        # print(run)
+        test_accs = [acc for name, acc in run_metrics.items() if name.startswith('test_accuracy_task_')]
+        if len(test_accs) == 0:
+            continue
+        test_avrg_acc = average_acc(test_accs)
+        print(f"{run_data.params['method']}, lr = {run_data.params['lr']}, n_epochs = {run_data.params['n_epochs']}, weight_decay = {run_data.params['weight_decay']} test_avrg_acc = {test_avrg_acc}")
 
-        # test_accs = [acc for name, acc in run_metrics.items() if name.startswith('test_accuracy_task_')]
-        # if len(test_accs) == 0:
-        #     continue
-        # test_avrg_acc = average_acc(test_accs)
-        # print('test_avrg_acc = ', test_avrg_acc)
-        # client.log_metric(run_id, 'avrg_test_acc', test_avrg_acc)
+        if test_avrg_acc > best_acc:
+            best_acc = test_avrg_acc
+            best_id = run_id
 
-        metric_names = list(run_metrics.keys())
-        for name in metric_names:
-            if not name.startswith('test_accuracy_task_'):
-                continue
-            metric_history = client.get_metric_history(run_id, name)
-            print(metric_history)
-
-        break
+    print()
+    best_run = client.get_run(best_id)
+    run_data = best_run.data
+    print(f"best: {run_data.params['method']}, lr = {run_data.params['lr']}, n_epochs = {run_data.params['n_epochs']}, weight_decay = {run_data.params['weight_decay']} test_avrg_acc = {best_acc}")
 
 
 def average_acc(metrics):

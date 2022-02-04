@@ -10,9 +10,9 @@ class args:
     pretrained = True
     dataset = 'permutation-mnist'
     n_experiences = 30
-    device = 'cuda:1'
-    batch_size = 128
-    num_workers = 4
+    device = 'cuda:0'
+    batch_size = 10
+    num_workers = 10
     seed = 42
     n_epochs = 20
     image_size = 64
@@ -23,6 +23,7 @@ class args:
     entropy_threshold = 0.7
     nested_run = True
     update_method = 'entropy'
+    forgetting_stopping_threshold = 0.5
 
 
 def main():

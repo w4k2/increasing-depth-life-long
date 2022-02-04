@@ -10,9 +10,9 @@ class args:
     pretrained = True
     dataset = 'permutation-mnist'
     n_experiences = 30
-    device = 'cuda:0'
-    batch_size = 10
-    num_workers = 10
+    device = 'cuda:1'
+    batch_size = 128
+    num_workers = 4
     seed = 42
     n_epochs = 20
     image_size = 64

@@ -15,7 +15,7 @@ from avalanche.benchmarks.datasets import MNIST, FashionMNIST, CIFAR10
 from avalanche.benchmarks.generators import dataset_benchmark
 from avalanche.benchmarks.classic import PermutedMNIST, SplitCIFAR100, SplitMNIST, SplitCIFAR10, SplitTinyImageNet, CORe50
 from avalanche.evaluation.metrics.confusion_matrix import StreamConfusionMatrix
-from avalanche.training.strategies import BaseStrategy, EWC, GEM, Replay
+from avalanche.training.strategies import BaseStrategy, EWC, GEM, Replay, SynapticIntelligence
 from avalanche.models import SimpleMLP
 from utils.mlflow_logger import MLFlowLogger
 from avalanche.training.plugins import EvaluationPlugin
@@ -78,7 +78,7 @@ def parse_args():
     parser.add_argument('--experiment', default='Default', help='flow experiment name')
     parser.add_argument('--nested_run', action='store_true', help='create nested run in mlflow')
 
-    parser.add_argument('--method', default='agem', choices=('baseline', 'll-stochastic-depth', 'ewc', 'gem', 'agem', 'pnn', 'replay'))
+    parser.add_argument('--method', default='agem', choices=('baseline', 'll-stochastic-depth', 'ewc', 'si', 'gem', 'agem', 'pnn', 'replay'))
     parser.add_argument('--base_model', default='resnet18', choices=('resnet9', 'resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
     parser.add_argument('--pretrained', default=True, type=distutils.util.strtobool, help='if True load weights pretrained on imagenet')
     parser.add_argument('--dataset', default='permutation-mnist', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist', 'tiny-imagenet', 'cifar10-mnist-fashion-mnist', 'cores50'))
@@ -96,7 +96,7 @@ def parse_args():
     parser.add_argument('--weight_decay', default=1e-6, type=float)
     parser.add_argument('--entropy_threshold', default=0.7, type=float, help='entropy threshold for adding new node attached directly to backbone')  # 0.8 for cifar100
     parser.add_argument('--update_method', default='entropy', choices=('entropy', 'sequential', 'parallel'))
-    parser.add_argument('--forgetting_stopping_threshold', default=0.7, type=float)
+    parser.add_argument('--forgetting_stopping_threshold', default=0.5, type=float)
 
     args = parser.parse_args()
     return args
@@ -259,7 +259,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         plugins.append(StochasticDepthPlugin(args.entropy_threshold, device))
         strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugins, evaluation_plugin, args.lr, args.weight_decay)
     elif args.method == 'ewc':
-        model = get_base_model(args.base_model, classes_per_task[0], input_channels, pretrained=args.pretrained)
+        model = resnet.resnet18_multihead(num_classes=classes_per_task[0], input_channels=input_channels, pretrained=args.pretrained)
         optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0.0)
         criterion = nn.CrossEntropyLoss()
         plugins.append(ConvertedLabelsPlugin())
@@ -267,6 +267,14 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         strategy = EWC(model, optimizer, criterion,
                        ewc_lambda=ewc_lambda, train_mb_size=args.batch_size, eval_mb_size=args.batch_size,
                        device=device, train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin)
+    elif args.method == 'si':
+        model = resnet.resnet18_multihead(num_classes=classes_per_task[0], input_channels=input_channels, pretrained=args.pretrained)
+        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0.0)
+        criterion = nn.CrossEntropyLoss()
+        plugins.append(ConvertedLabelsPlugin())
+        strategy = SynapticIntelligence(model, optimizer, criterion,
+                                        si_lambda=1000, train_mb_size=args.batch_size, eval_mb_size=args.batch_size,
+                                        device=device, train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin)
     elif args.method == 'gem':
         model = resnet.resnet18_multihead(num_classes=classes_per_task[0], input_channels=input_channels, pretrained=args.pretrained)
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)

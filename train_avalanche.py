@@ -263,7 +263,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0.0)
         criterion = nn.CrossEntropyLoss()
         plugins.append(ConvertedLabelsPlugin())
-        ewc_lambda = 100
+        ewc_lambda = 1000
         strategy = EWC(model, optimizer, criterion,
                        ewc_lambda=ewc_lambda, train_mb_size=args.batch_size, eval_mb_size=args.batch_size,
                        device=device, train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin)

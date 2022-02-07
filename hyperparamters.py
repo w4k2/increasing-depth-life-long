@@ -5,11 +5,11 @@ import mlflow
 class args:
     run_name = None
     experiment = 'PermutedMNIST'
-    method = 'ewc'
+    method = 'replay'
     base_model = 'resnet18'
     pretrained = True
     dataset = 'permutation-mnist'
-    n_experiences = 30
+    n_experiences = 3
     device = 'cuda:1'
     batch_size = 128
     num_workers = 4

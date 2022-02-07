@@ -23,6 +23,9 @@ from avalanche.evaluation.metrics import accuracy_metrics, loss_metrics, forgett
 
 from avalanche.logging import InteractiveLogger
 from utils.custom_plugins import *
+from utils.custom_replay import *
+
+import cProfile
 
 
 def main():
@@ -296,12 +299,12 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
                                lr=args.lr, momentum=args.momentum, train_mb_size=args.batch_size, eval_mb_size=args.batch_size,
                                train_epochs=args.n_epochs, device=device, evaluator=evaluation_plugin, eval_every=-1)
     elif args.method == 'replay':
-        model = get_base_model(args.base_model, classes_per_task[0], input_channels, pretrained=args.pretrained)
+        model = resnet.resnet18_multihead(num_classes=classes_per_task[0], input_channels=input_channels, pretrained=args.pretrained)
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         criterion = nn.CrossEntropyLoss()
-        strategy = Replay(model, optimizer, criterion, mem_size=3000*args.n_experiences,
-                          train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
-                          train_epochs=args.n_epochs, evaluator=evaluation_plugin, eval_every=-1)
+        strategy = ReplayModified(model, optimizer, criterion, mem_size=3000*args.n_experiences,
+                                  train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
+                                  train_epochs=args.n_epochs, evaluator=evaluation_plugin, eval_every=-1)
 
     return strategy, mlf_logger
 
@@ -379,3 +382,4 @@ def compute_conf_matrix(test_stream, strategy, classes_per_task):
 
 if __name__ == '__main__':
     main()
+    # cProfile.run('main()')

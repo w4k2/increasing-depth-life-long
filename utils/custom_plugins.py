@@ -5,15 +5,11 @@ import torch
 import torch.utils.data
 import torch.optim as optim
 import copy
-import itertools
 
 from avalanche.models import avalanche_forward
-# from torch.utils.data import random_split, Subset
-from avalanche.benchmarks.utils.data_loader import \
-    GroupBalancedInfiniteDataLoader, _default_collate_mbatches_fn
+from avalanche.benchmarks.utils.data_loader import _default_collate_mbatches_fn
 from avalanche.training.plugins.evaluation import default_logger
 from avalanche.training.strategies.base_strategy import BaseStrategy
-from avalanche.training.plugins import AGEMPlugin
 from torch.utils.data.dataloader import DataLoader
 from torchvision.transforms import Lambda
 from avalanche.training.plugins import StrategyPlugin
@@ -135,88 +131,6 @@ class StochasticDepthPlugin(ConvertedLabelsPlugin):
             strategy.model.set_path(task_path)
 
 
-# class AGEMPluginModified(StrategyPlugin):
-#     """ Average Gradient Episodic Memory Plugin.
-
-#     AGEM projects the gradient on the current minibatch by using an external
-#     episodic memory of patterns from previous experiences. If the dot product
-#     between the current gradient and the (average) gradient of a randomly
-#     sampled set of memory examples is negative, the gradient is projected.
-#     This plugin does not use task identities.
-#     """
-
-#     def __init__(self, patterns_per_experience: int, sample_size: int):
-#         """
-#         :param patterns_per_experience: number of patterns per experience in the
-#             memory.
-#         :param sample_size: number of patterns in memory sample when computing
-#             reference gradient.
-#         """
-
-#         super().__init__()
-
-#         self.patterns_per_experience = int(patterns_per_experience)
-#         self.sample_size = int(sample_size)
-
-#         self.buffers = []  # one AvalancheDataset for each experience.
-#         self.buffers_dataloders = []
-
-#         self.reference_gradients = None
-
-#     def before_training_iteration(self, strategy, **kwargs):
-#         """
-#         Compute reference gradient on memory sample.
-#         """
-#         if len(self.buffers) > 0:
-#             strategy.model.train()
-#             strategy.optimizer.zero_grad()
-#             mb = self.sample_from_memory()
-#             xref, yref, tid = mb[0], mb[1], mb[-1]
-#             xref, yref = xref.to(strategy.device), yref.to(strategy.device)
-
-#             out = avalanche_forward(strategy.model, xref, tid)
-#             loss = strategy._criterion(out, yref)
-#             loss.backward()
-#             # gradient can be None for some head on multi-headed models
-#             self.reference_gradients = self.get_gradiens_vector(strategy.model)
-#             strategy.optimizer.zero_grad()
-
-#     def get_gradiens_vector(self, model):
-#         gradient_vec = []
-#         for p in model.parameters():
-#             if p.requires_grad:
-#                 gradient_vec.append(p.grad.view(-1))
-#         gradient_vec = torch.cat(gradient_vec)
-#         return gradient_vec
-
-#     @torch.no_grad()
-#     def after_backward(self, strategy, **kwargs):
-#         """
-#         Project gradient based on reference gradients
-#         """
-#         if len(self.buffers) > 0:
-#             current_gradients = self.get_gradiens_vector(strategy.model)
-
-#             assert current_gradients.shape == self.reference_gradients.shape, \
-#                 "Different model parameters in AGEM projection"
-
-#             dotg = torch.dot(current_gradients, self.reference_gradients)
-#             if dotg < 0:
-#                 alpha2 = dotg / torch.dot(self.reference_gradients,
-#                                           self.reference_gradients)
-#                 grad_proj = current_gradients - self.reference_gradients * alpha2
-
-#                 count = 0
-#                 for p in strategy.model.parameters():
-#                     n_param = p.numel()
-#                     if p.grequires_grad:
-#                         p.grad.copy_(grad_proj[count:count+n_param].view_as(p))
-#                     count += n_param
-
-#     def after_training_exp(self, strategy, **kwargs):
-#         """ Update replay memory with patterns from current experience. """
-#         self.update_memory(strategy.experience.dataset)
-
 class AGEMPluginModified(StrategyPlugin):
     """ Average Gradient Episodic Memory Plugin.
 
@@ -330,8 +244,9 @@ class AGEMPluginModified(StrategyPlugin):
 
 
 class RehersalBuffer:
-    def __init__(self, datasets):
+    def __init__(self, datasets, infinite=True):
         self.datasets = datasets
+        self.infinite = infinite
 
     def __getitem__(self, index):
         inputs = []
@@ -357,7 +272,12 @@ class RehersalBuffer:
         return inputs, targets
 
     def __len__(self):
-        return sys.maxsize
+        length = None
+        if self.infinite:
+            length = sys.maxsize
+        else:
+            length = sum(len(dataset) for dataset in self.datasets)
+        return length
 
 
 class AGEMModified(BaseStrategy):

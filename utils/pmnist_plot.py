@@ -6,20 +6,22 @@ def main():
     experiment_id = 2
     runs = {
         'baseline': '0bcbc3399d8646f7843773322966585a',
-        'ours': '4655f8b07d984caf8e95bbe4ced7721b'
+        'pnn': '4d145418eb9d4c6eaf0a305fbe09c479',
+        'ewc': '1e53d7c3ca474547811750dc897c0a2e',
+        'ours': '4655f8b07d984caf8e95bbe4ced7721b',
     }
 
-    baseline_acc = get_average_accuracy(experiment_id, runs['baseline'])
-    ours_acc = get_average_accuracy(experiment_id, runs['ours'])
 
     plt.figure(figsize=(10, 4))
 
-    plt.plot(baseline_acc, 'gray', label='baseline')
-    plt.plot(ours_acc, 'r', label='ours')
+    for method, color in zip(('baseline', 'pnn', 'ewc', 'ours'), ('gray', 'g', 'm', 'r')):
+        acc = get_average_accuracy(experiment_id, runs[method])
+        plt.plot(acc, color, label=method)
 
     plt.legend()
     plt.xlabel('tasks')
     plt.ylabel('avrg acc')
+    plt.ylim((0.9, 1.0))
     plt.show()
 
 

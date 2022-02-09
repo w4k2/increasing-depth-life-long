@@ -5,14 +5,14 @@ import mlflow
 class args:
     run_name = None
     experiment = 'Cifar100'
-    method = 'replay'
+    method = 'agem'
     base_model = 'resnet18'
     pretrained = True
     dataset = 'cifar100'
     n_experiences = 20
     train_on_experiences = 3
     device = 'cuda:1'
-    batch_size = 128
+    batch_size = 10
     num_workers = 4
     seed = 42
     n_epochs = 20

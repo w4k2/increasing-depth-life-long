@@ -5,7 +5,7 @@ import mlflow
 class args:
     run_name = None
     experiment = 'Cifar100'
-    method = 'lwf'
+    method = 'pnn'
     base_model = 'resnet18'
     pretrained = True
     dataset = 'cifar100'
@@ -16,7 +16,7 @@ class args:
     num_workers = 4
     seed = 42
     n_epochs = 20
-    image_size = 64
+    image_size = 32
     debug = False
     lr = 0.0001
     momentum = 0.8
@@ -38,7 +38,7 @@ def main():
     with mlflow.start_run(experiment_id=experiment_id):
         for lr in (0.01, 0.001, 0.0008):
             for n_epochs in (1, 5, 10, 20):
-                for weight_decay in (0, 1e-4, 1e-5, 1e-6):
+                for weight_decay in (1e-4, 1e-5, 1e-6):
                     print(f'{args.method}, lr = {lr}, n_epochs = {n_epochs}, weight_decay = {weight_decay}')
                     args.run_name = f'{args.method}, lr={lr}, n_epochs={n_epochs}, weight_decay={weight_decay}'
                     args.lr = lr

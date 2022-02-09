@@ -1,0 +1,1 @@
+lwf, lr=0.001, n_epochs=5, weight_decay=0

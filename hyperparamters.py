@@ -4,15 +4,16 @@ import mlflow
 
 class args:
     run_name = None
-    experiment = 'PermutedMNIST'
-    method = 'agem'
+    experiment = 'Cifar100'
+    method = 'ewc'
     base_model = 'resnet18'
     pretrained = True
-    dataset = 'permutation-mnist'
-    n_experiences = 3
-    device = 'cuda:0'
-    batch_size = 10
-    num_workers = 10
+    dataset = 'cifar100'
+    n_experiences = 20
+    train_on_experiences = 3
+    device = 'cuda:1'
+    batch_size = 128
+    num_workers = 4
     seed = 42
     n_epochs = 20
     image_size = 64
@@ -23,7 +24,7 @@ class args:
     entropy_threshold = 0.7
     nested_run = True
     update_method = 'entropy'
-    forgetting_stopping_threshold = 0.5
+    forgetting_stopping_threshold = 1000
 
 
 def main():

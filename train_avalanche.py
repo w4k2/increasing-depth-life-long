@@ -42,6 +42,8 @@ def run_experiment(args):
 
     results = []
     for i, train_task in enumerate(train_stream):
+        if i >= args.train_on_experiences:
+            break
         eval_stream = [test_stream[i]]
         strategy.train(train_task, eval_stream, num_workers=20)
         selected_tasks = [test_stream[j] for j in range(0, i+1)]
@@ -86,6 +88,7 @@ def parse_args():
     parser.add_argument('--pretrained', default=True, type=distutils.util.strtobool, help='if True load weights pretrained on imagenet')
     parser.add_argument('--dataset', default='permutation-mnist', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist', 'tiny-imagenet', 'cifar10-mnist-fashion-mnist', 'cores50'))
     parser.add_argument('--n_experiences', default=50, type=int)
+    parser.add_argument('--train_on_experiences', default=50, type=int)
     parser.add_argument('--device', default='cuda', type=str)
     parser.add_argument('--batch_size', default=10, type=int)
     parser.add_argument('--num_workers', default=20, type=int)

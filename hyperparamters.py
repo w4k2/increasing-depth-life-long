@@ -5,7 +5,7 @@ import mlflow
 class args:
     run_name = None
     experiment = 'Cifar100'
-    method = 'pnn'
+    method = 'replay'
     base_model = 'resnet18'
     pretrained = True
     dataset = 'cifar100'
@@ -16,7 +16,7 @@ class args:
     num_workers = 4
     seed = 42
     n_epochs = 20
-    image_size = 32
+    image_size = 64
     debug = False
     lr = 0.0001
     momentum = 0.8

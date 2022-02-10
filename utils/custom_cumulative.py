@@ -2,7 +2,7 @@ from typing import Optional, List
 
 from torch.nn import Module
 from torch.optim import Optimizer
-from torch.utils.data import ConcatDataset
+from torch.utils.data.dataloader import DataLoader
 
 from avalanche.benchmarks.utils import AvalancheConcatDataset
 from avalanche.training.plugins.evaluation import default_logger
@@ -55,3 +55,23 @@ class CumulativeModified(BaseStrategy):
         """
         self.dataset_list.append(self.experience.dataset)
         self.adapted_dataset = AvalancheConcatDataset(self.dataset_list)
+
+
+    def make_train_dataloader(self, num_workers=0, shuffle=True,
+                              pin_memory=True, **kwargs):
+        """ Data loader initialization.
+
+        Called at the start of each learning experience after the dataset 
+        adaptation.
+
+        :param num_workers: number of thread workers for the data loading.
+        :param shuffle: True if the data should be shuffled, False otherwise.
+        :param pin_memory: If True, the data loader will copy Tensors into CUDA
+            pinned memory before returning them. Defaults to True.
+        """
+        self.dataloader = DataLoader(
+            self.adapted_dataset,
+            num_workers=num_workers,
+            batch_size=self.train_mb_size,
+            shuffle=shuffle,
+            pin_memory=pin_memory)

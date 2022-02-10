@@ -318,14 +318,14 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         criterion = nn.CrossEntropyLoss()
         strategy = ReplayModified(model, optimizer, criterion, mem_size=250*args.n_experiences,
                                   train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
-                                  train_epochs=args.n_epochs, evaluator=evaluation_plugin, eval_every=-1)
+                                  train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
     elif args.method == 'lwf':
         model = resnet.resnet18_multihead(num_classes=classes_per_task[0], input_channels=input_channels, pretrained=args.pretrained)
         optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
         criterion = nn.CrossEntropyLoss()
         strategy = LwF(model, optimizer, criterion, alpha=1.0, temperature=1.0,
                                   train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
-                                  train_epochs=args.n_epochs, evaluator=evaluation_plugin, eval_every=-1)
+                                  train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
 
     return strategy, mlf_logger
 

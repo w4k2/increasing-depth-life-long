@@ -1,9 +1,10 @@
+import pathlib
 import mlflow
 
 
 def main():
-    parent_run_id = '86184704456040ffa0c8fa6c12cfac3d'
-    client = mlflow.tracking.MlflowClient('///home/pwr/Documents/stochastic-depth-v2/stochastic-depth-data-streams/mlruns/')
+    parent_run_id = 'dcb4b83e3c444256ae6f1199d570bb09'
+    client = mlflow.tracking.MlflowClient('///home/jkozal/Documents/PWr/stochastic_depth/mlruns/')
 
     run_infos = client.list_run_infos('4')
     best_acc = 0.0
@@ -21,10 +22,12 @@ def main():
             continue
 
         run_metrics = run_data.metrics
-        test_accs = [acc for name, acc in run_metrics.items() if name.startswith('test_accuracy_task_')]
-        if len(test_accs) == 0:
-            continue
-        test_avrg_acc = average_acc(test_accs)
+        # test_accs = [acc for name, acc in run_metrics.items() if name.startswith('test_accuracy_task_')]
+        # if len(test_accs) == 0:
+        #     continue
+        # test_avrg_acc = sum(test_accs) / len(test_accs)
+
+        test_avrg_acc = average_acc(run_id)
         print(f"{run_data.params['method']}, lr = {run_data.params['lr']}, n_epochs = {run_data.params['n_epochs']}, weight_decay = {run_data.params['weight_decay']} test_avrg_acc = {test_avrg_acc}")
 
         if test_avrg_acc > best_acc:
@@ -37,12 +40,34 @@ def main():
     print(f"best: {run_data.params['method']}, lr = {run_data.params['lr']}, n_epochs = {run_data.params['n_epochs']}, weight_decay = {run_data.params['weight_decay']} test_avrg_acc = {best_acc}")
 
 
-def average_acc(metrics):
-    """compute average (or cumulative accuracy)
-    metrics - list or iterable of floats with accuracy values for each task
-    """
-    avrg_acc = sum(metrics) / len(metrics)
+def average_acc(run_id, max_num_tasks=3):
+    run_path = pathlib.Path(f'mlruns/2/{run_id}/metrics/')
+    num_tasks = get_num_tasks(run_path, max_num_tasks)
+    accs = []
+    for i in reversed(list(range(num_tasks))):
+        filepath = run_path / f'test_accuracy_task_{i}'
+        with open(filepath, 'r') as f:
+            file_contents = [line for line in f.readlines()]
+
+        metrics_index = num_tasks - (i+1)
+        correct_line = file_contents[metrics_index]
+        value_str = correct_line.split()[-2]
+        acc = float(value_str)
+        accs.append(acc)
+
+    avrg_acc = sum(accs) / len(accs)
     return avrg_acc
+
+
+def get_num_tasks(run_path, max_num_tasks):
+    num_tasks = 0
+    for i in range(max_num_tasks):
+        filepath = run_path / f'test_accuracy_task_{i}'
+        if filepath.exists():
+            num_tasks = i
+        else:
+            break
+    return num_tasks
 
 
 if __name__ == '__main__':

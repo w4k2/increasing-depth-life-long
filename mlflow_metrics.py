@@ -2,10 +2,10 @@ import mlflow
 
 
 def main():
-    parent_run_id = '59e78034f00d46e78ed65abf427d00ed'
+    parent_run_id = '86184704456040ffa0c8fa6c12cfac3d'
     client = mlflow.tracking.MlflowClient('///home/pwr/Documents/stochastic-depth-v2/stochastic-depth-data-streams/mlruns/')
 
-    run_infos = client.list_run_infos('2')
+    run_infos = client.list_run_infos('4')
     best_acc = 0.0
     best_id = None
 

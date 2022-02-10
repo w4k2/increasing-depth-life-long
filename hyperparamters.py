@@ -4,16 +4,16 @@ import mlflow
 
 class args:
     run_name = None
-    experiment = 'Cifar100'
+    experiment = 'PermutedMNIST'
     method = 'll-stochastic-depth'
     base_model = 'resnet18'
     pretrained = True
-    dataset = 'cifar100'
-    n_experiences = 20
+    dataset = 'permutation-mnist'
+    n_experiences = 50
     train_on_experiences = 3
     device = 'cuda:0'
     batch_size = 128
-    num_workers = 4
+    num_workers = 10
     seed = 42
     n_epochs = 20
     image_size = 64

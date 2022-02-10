@@ -5,23 +5,23 @@ import mlflow
 class args:
     run_name = None
     experiment = 'Cifar100'
-    method = 'pnn'
+    method = 'll-stochastic-depth'
     base_model = 'resnet18'
     pretrained = True
     dataset = 'cifar100'
     n_experiences = 20
     train_on_experiences = 3
-    device = 'cuda:1'
+    device = 'cuda:0'
     batch_size = 128
     num_workers = 4
     seed = 42
     n_epochs = 20
-    image_size = 32
+    image_size = 64
     debug = False
     lr = 0.0001
     momentum = 0.8
     weight_decay = 1e-6
-    entropy_threshold = 0.7
+    entropy_threshold = 0.8
     nested_run = True
     update_method = 'entropy'
     forgetting_stopping_threshold = 1000

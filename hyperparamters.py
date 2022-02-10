@@ -4,12 +4,12 @@ import mlflow
 
 class args:
     run_name = None
-    experiment = 'Cifar100'
-    method = 'cumulative'
+    experiment = 'PermutedMNIST'
+    method = 'lwf'
     base_model = 'resnet18'
     pretrained = True
-    dataset = 'cifar100'
-    n_experiences = 20
+    dataset = 'permutation-mnist'
+    n_experiences = 50
     train_on_experiences = 3
     device = 'cuda:1'
     batch_size = 128

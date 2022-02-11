@@ -10,7 +10,7 @@ def main():
         'replay': ['3002fc6aa16849788ffd7d5683357403', '5767d9cacf734542bcb97c8dc8dffde1'],
         'a-gem': ['20ef4f666176469fb97a577563bf03f2', 'fe17f4ae261d42b6ae37968bb02345fd'],
         'pnn': ['4d145418eb9d4c6eaf0a305fbe09c479', 'b384bcde400643a8a6505ffd9e41a116'],
-        'lwf': [None, '1210e3abce85484b908a465efcf69904'],
+        'lwf': ['8fc98af384714e3ba611e44491aff9ab', '1210e3abce85484b908a465efcf69904'],
         'ours': ['20bb9712c0f64ea588e65906634b4297', '049b9d24be3c4df2b43e0a8b7aeb161b'],
     }
 

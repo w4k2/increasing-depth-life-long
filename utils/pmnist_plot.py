@@ -5,12 +5,14 @@ import matplotlib.pyplot as plt
 def main():
     experiment_id = 2
     runs = {
-        'baseline': '0bcbc3399d8646f7843773322966585a',
+        'upper': 'b16331fd04b740bebd6a72767e3a3e8e',
         'pnn': '4d145418eb9d4c6eaf0a305fbe09c479',
         'ewc': '1e53d7c3ca474547811750dc897c0a2e',
-        'ours': '4655f8b07d984caf8e95bbe4ced7721b',
+        'ours': '20bb9712c0f64ea588e65906634b4297',
+        'replay': '3002fc6aa16849788ffd7d5683357403',
+        'a-gem': '20ef4f666176469fb97a577563bf03f2',
+        'lwf': '8fc98af384714e3ba611e44491aff9ab',
     }
-
 
     plt.figure(figsize=(10, 4))
 

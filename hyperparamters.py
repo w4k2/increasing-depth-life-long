@@ -8,7 +8,7 @@ class args:
     method = 'lwf'
     base_model = 'resnet18'
     pretrained = True
-    dataset = 'permutation-mnist'
+    dataset = 'tiny-imagenet'
     n_experiences = 20
     train_on_experiences = 3
     device = 'cuda:1'

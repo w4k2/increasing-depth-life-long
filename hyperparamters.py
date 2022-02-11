@@ -5,14 +5,14 @@ import mlflow
 class args:
     run_name = None
     experiment = 'TinyImageNet'
-    method = 'replay'
+    method = 'agem'
     base_model = 'resnet18'
     pretrained = True
     dataset = 'tiny-imagenet'
     n_experiences = 20
     train_on_experiences = 3
-    device = 'cuda:0'
-    batch_size = 128
+    device = 'cuda:1'
+    batch_size = 10
     num_workers = 10
     seed = 42
     n_epochs = 20

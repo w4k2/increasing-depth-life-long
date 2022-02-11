@@ -4,12 +4,12 @@ import mlflow
 
 class args:
     run_name = None
-    experiment = 'PermutedMNIST'
+    experiment = 'TinyImageNet'
     method = 'lwf'
     base_model = 'resnet18'
     pretrained = True
     dataset = 'permutation-mnist'
-    n_experiences = 50
+    n_experiences = 20
     train_on_experiences = 3
     device = 'cuda:1'
     batch_size = 128

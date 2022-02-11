@@ -3,7 +3,7 @@ import mlflow
 
 
 def main():
-    parent_run_id = '673021f84ea84304a281bbb538f8974c'
+    parent_run_id = '72905e3735174f9584f681835e5c7bd0'
     client = mlflow.tracking.MlflowClient('///home/jkozal/Documents/PWr/stochastic_depth/mlruns/')
 
     run_infos = client.list_run_infos('1')

@@ -155,7 +155,8 @@ def get_data(dataset_name, n_experiences, seed, image_size):
         benchmark = SplitTinyImageNet(n_experiences=n_experiences,
                                       train_transform=train_transforms,
                                       eval_transform=eval_transforms,
-                                      seed=seed
+                                      seed=seed,
+                                      return_task_id=True,
                                       )
         classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'cifar10-mnist-fashion-mnist':

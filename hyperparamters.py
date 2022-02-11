@@ -5,7 +5,7 @@ import mlflow
 class args:
     run_name = None
     experiment = 'TinyImageNet'
-    method = 'pnn'
+    method = 'cumulative'
     base_model = 'resnet18'
     pretrained = True
     dataset = 'tiny-imagenet'
@@ -16,7 +16,7 @@ class args:
     num_workers = 10
     seed = 42
     n_epochs = 20
-    image_size = 32
+    image_size = 64
     debug = False
     lr = 0.0001
     momentum = 0.8

@@ -3,10 +3,10 @@ import mlflow
 
 
 def main():
-    parent_run_id = 'dcb4b83e3c444256ae6f1199d570bb09'
+    parent_run_id = '114226043b804273a6780f9d014f1ee7'
     client = mlflow.tracking.MlflowClient('///home/jkozal/Documents/PWr/stochastic_depth/mlruns/')
 
-    run_infos = client.list_run_infos('4')
+    run_infos = client.list_run_infos('2')
     best_acc = 0.0
     best_id = None
 

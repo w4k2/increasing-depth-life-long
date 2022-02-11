@@ -3,10 +3,10 @@ import mlflow
 
 
 def main():
-    parent_run_id = '114226043b804273a6780f9d014f1ee7'
+    parent_run_id = '673021f84ea84304a281bbb538f8974c'
     client = mlflow.tracking.MlflowClient('///home/jkozal/Documents/PWr/stochastic_depth/mlruns/')
 
-    run_infos = client.list_run_infos('2')
+    run_infos = client.list_run_infos('1')
     best_acc = 0.0
     best_id = None
 
@@ -21,7 +21,7 @@ def main():
         if parent_run != parent_run_id:
             continue
 
-        run_metrics = run_data.metrics
+        # run_metrics = run_data.metrics
         # test_accs = [acc for name, acc in run_metrics.items() if name.startswith('test_accuracy_task_')]
         # if len(test_accs) == 0:
         #     continue
@@ -41,7 +41,7 @@ def main():
 
 
 def average_acc(run_id, max_num_tasks=3):
-    run_path = pathlib.Path(f'mlruns/2/{run_id}/metrics/')
+    run_path = pathlib.Path(f'mlruns/1/{run_id}/metrics/')
     num_tasks = get_num_tasks(run_path, max_num_tasks)
     accs = []
     for i in reversed(list(range(num_tasks))):

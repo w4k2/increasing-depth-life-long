@@ -16,14 +16,14 @@ def main():
 
     plt.figure(figsize=(10, 4))
 
-    for method, color in zip(('baseline', 'pnn', 'ewc', 'ours'), ('gray', 'g', 'm', 'r')):
+    for method, color in zip(('upper', 'pnn', 'ewc', 'replay', 'a-gem', 'lwf', 'ours'), ('gray', 'g', 'm', 'b', 'cyan', 'lime', 'r')):
         acc = get_average_accuracy(experiment_id, runs[method])
         plt.plot(acc, color, label=method)
 
-    plt.legend()
+    plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     plt.xlabel('tasks')
     plt.ylabel('avrg acc')
-    plt.ylim((0.9, 1.0))
+    # plt.ylim((0.9, 1.0))
     plt.show()
 
 

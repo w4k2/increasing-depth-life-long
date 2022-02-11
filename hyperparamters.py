@@ -5,13 +5,13 @@ import mlflow
 class args:
     run_name = None
     experiment = 'TinyImageNet'
-    method = 'ewc'
+    method = 'll-stochastic-depth'
     base_model = 'resnet18'
     pretrained = True
     dataset = 'tiny-imagenet'
     n_experiences = 20
     train_on_experiences = 3
-    device = 'cuda:1'
+    device = 'cuda:0'
     batch_size = 128
     num_workers = 10
     seed = 42
@@ -21,7 +21,7 @@ class args:
     lr = 0.0001
     momentum = 0.8
     weight_decay = 1e-6
-    entropy_threshold = 0.8
+    entropy_threshold = 0.7
     nested_run = True
     update_method = 'entropy'
     forgetting_stopping_threshold = 1000
@@ -37,7 +37,7 @@ def main():
 
     with mlflow.start_run(experiment_id=experiment_id):
         for lr in (0.01, 0.001, 0.0008):
-            for n_epochs in (1, 5): #, 10, 20):
+            for n_epochs in (1, 5, 10, 20):
                 for weight_decay in (1e-4, 1e-5, 1e-6):
                     print(f'{args.method}, lr = {lr}, n_epochs = {n_epochs}, weight_decay = {weight_decay}')
                     args.run_name = f'{args.method}, lr={lr}, n_epochs={n_epochs}, weight_decay={weight_decay}'

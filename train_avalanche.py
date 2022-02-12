@@ -87,7 +87,8 @@ def parse_args():
     parser.add_argument('--method', default='agem', choices=('baseline', 'cumulative', 'll-stochastic-depth', 'ewc', 'si', 'gem', 'agem', 'pnn', 'replay', 'lwf'))
     parser.add_argument('--base_model', default='resnet18', choices=('resnet9', 'resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
     parser.add_argument('--pretrained', default=True, type=distutils.util.strtobool, help='if True load weights pretrained on imagenet')
-    parser.add_argument('--dataset', default='permutation-mnist', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist', 'tiny-imagenet', 'cifar10-mnist-fashion-mnist', 'cores50'))
+    parser.add_argument('--dataset', default='permutation-mnist', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist', 'tiny-imagenet',
+                        'cifar10-mnist-fashion-mnist', 'mnist-fashion-mnist-cifar10', 'fashion-mnist-cifar10-mnist', 'cores50'))
     parser.add_argument('--n_experiences', default=50, type=int)
     parser.add_argument('--train_on_experiences', default=50, type=int)
     parser.add_argument('--device', default='cuda', type=str)
@@ -160,26 +161,13 @@ def get_data(dataset_name, n_experiences, seed, image_size):
                                       )
         classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'cifar10-mnist-fashion-mnist':
-        cifar10_norm_stats = (0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)
-        mnist_norm_stats = (0.1307,), (0.3081,)
-        fmnist_norm_stats = (0.2860,), (0.3530,)
-
-        cifar10_train_transforms, cifar10_eval_transforms = get_transforms(cifar10_norm_stats, image_size)
-        mnist_train_transforms, mnist_eval_transforms = get_transforms(mnist_norm_stats, image_size, use_hflip=False, stack_channels=True)
-        fmnist_train_transforms, fmnist_eval_transforms = get_transforms(fmnist_norm_stats, image_size, use_hflip=False, stack_channels=True)
-
-        benchmark = dataset_benchmark(
-            [
-                CIFAR10('./data/datasets', train=True, transform=cifar10_train_transforms, download=True),
-                MNIST('./data/datasets', train=True, transform=mnist_train_transforms, download=True),
-                FashionMNIST('./data/datasets', train=True, transform=fmnist_train_transforms, download=True)
-            ],
-            [
-                CIFAR10('./data/datasets', train=False, transform=cifar10_eval_transforms, download=True),
-                MNIST('./data/datasets', train=False, transform=mnist_eval_transforms, download=True),
-                FashionMNIST('./data/datasets', train=False, transform=fmnist_eval_transforms, download=True)
-            ],
-        )
+        benchmark = get_multidataset_benchmark(('cifar', 'mnist', 'fmnist'), image_size)
+        classes_per_task = [10, 10, 10]
+    elif dataset_name == 'mnist-fashion-mnist-cifar10':
+        benchmark = get_multidataset_benchmark(('mnist', 'fmnist', 'cifar'), image_size)
+        classes_per_task = [10, 10, 10]
+    elif dataset_name == 'fashion-mnist-cifar10-mnist':
+        benchmark = get_multidataset_benchmark(('fmnist', 'cifar', 'mnist'), image_size)
         classes_per_task = [10, 10, 10]
     elif dataset_name == 'cores50':
         norm_stats = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
@@ -210,6 +198,35 @@ def get_data(dataset_name, n_experiences, seed, image_size):
     if not test_stream:
         test_stream = benchmark.test_stream
     return train_stream, test_stream, classes_per_task
+
+
+def get_multidataset_benchmark(order, image_size):
+    cifar10_norm_stats = (0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)
+    mnist_norm_stats = (0.1307,), (0.3081,)
+    fmnist_norm_stats = (0.2860,), (0.3530,)
+
+    cifar10_train_transforms, cifar10_eval_transforms = get_transforms(cifar10_norm_stats, image_size)
+    mnist_train_transforms, mnist_eval_transforms = get_transforms(mnist_norm_stats, image_size, use_hflip=False, stack_channels=True)
+    fmnist_train_transforms, fmnist_eval_transforms = get_transforms(fmnist_norm_stats, image_size, use_hflip=False, stack_channels=True)
+
+    train_datasets = []
+    test_datasets = []
+
+    for dataset_name in order:
+        if dataset_name == 'cifar':
+            train_datasets.append(CIFAR10('./data/datasets', train=True, transform=cifar10_train_transforms, download=True))
+            test_datasets.append(CIFAR10('./data/datasets', train=False, transform=cifar10_eval_transforms, download=True))
+        elif dataset_name == 'mnist':
+            train_datasets.append(MNIST('./data/datasets', train=True, transform=mnist_train_transforms, download=True))
+            test_datasets.append(MNIST('./data/datasets', train=False, transform=mnist_eval_transforms, download=True))
+        elif dataset_name == 'fmnist':
+            train_datasets.append(FashionMNIST('./data/datasets', train=True, transform=fmnist_train_transforms, download=True))
+            test_datasets.append(FashionMNIST('./data/datasets', train=False, transform=fmnist_eval_transforms, download=True))
+        else:
+            raise ValueError("Invalid dataset name")
+
+    benchmark = dataset_benchmark(train_datasets, test_datasets)
+    return benchmark
 
 
 def get_transforms(norm_stats, image_size, use_hflip=True, stack_channels=False):

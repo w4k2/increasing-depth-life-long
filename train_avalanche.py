@@ -25,6 +25,7 @@ from avalanche.logging import InteractiveLogger
 from utils.custom_plugins import *
 from utils.custom_replay import *
 from utils.custom_cumulative import *
+from utils.custom_agem import *
 
 import cProfile
 

@@ -5,7 +5,7 @@ from avalanche.training.plugins.evaluation import default_logger
 from avalanche.training.strategies.base_strategy import BaseStrategy
 from torch.utils.data import RandomSampler
 from torch.utils.data.dataloader import DataLoader
-
+from avalanche.training.storage_policy import ReservoirSamplingBuffer
 
 class MutliDataset:
     def __init__(self, datasets):
@@ -108,6 +108,7 @@ class ReplayPluginModified(StrategyPlugin):
 
         dataset_list = list(self.datasets_buffer)
         dataset_list.append(strategy.adapted_dataset)
+        concat_dataset = MutliDataset(dataset_list)
 
         sampler = RehersalSampler(dataset_sizes=[len(dataset) for dataset in dataset_list],
                     dataset_samplers=[RandomSampler(dataset) for dataset in dataset_list],
@@ -129,7 +130,6 @@ class ReplayPluginModified(StrategyPlugin):
                 batch.append(t)
             return batch
 
-        concat_dataset = MutliDataset(dataset_list)
         strategy.dataloader = DataLoader(
             concat_dataset,
             batch_sampler=sampler,
@@ -139,12 +139,19 @@ class ReplayPluginModified(StrategyPlugin):
 
     def after_training_exp(self, strategy: "BaseStrategy", **kwargs):
         self.datasets_buffer.append(strategy.experience.dataset)
-
         new_size = self.mem_size // len(self.datasets_buffer)
         for i in range(len(self.datasets_buffer)):
-            indicies = torch.randperm(len(self.datasets_buffer[i]))[:new_size]
-            self.datasets_buffer[i] = torch.utils.data.Subset(self.datasets_buffer[i], indicies)
+            self.datasets_buffer[i] = self.dataset_subset(self.datasets_buffer[i], new_size)
 
+    def dataset_subset(self, dataset, new_size):
+        indices = torch.randperm(len(dataset))[:new_size]
+        subset = None
+        if type(dataset) == torch.utils.data.Subset:
+            dataset.indices = [dataset.indices[i] for i in indices]
+            subset = dataset
+        else:
+            subset = torch.utils.data.Subset(dataset, indices)
+        return subset
 
 class ReplayModified(BaseStrategy):
     """ Experience replay strategy.

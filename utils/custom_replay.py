@@ -5,7 +5,7 @@ from avalanche.training.plugins.evaluation import default_logger
 from avalanche.training.strategies.base_strategy import BaseStrategy
 from torch.utils.data import RandomSampler
 from torch.utils.data.dataloader import DataLoader
-from avalanche.training.storage_policy import ReservoirSamplingBuffer
+
 
 class MutliDataset:
     def __init__(self, datasets):

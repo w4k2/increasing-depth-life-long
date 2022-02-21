@@ -15,9 +15,9 @@ dependencies:
   - seaborn
   - pylint
   - rope
-  - mlflow
+  - mlflow=1.22
   - seaborn
   - pytest
   - pip
   - pip:
-    - git+https://github.com/ContinualAI/avalanche.git
+    - avalanche-lib

@@ -7,6 +7,7 @@ def main():
     args = parse_args()
     args.nested_run = True
     args.debug = False
+    args.train_on_experiences = 3
 
     client = mlflow.tracking.MlflowClient()
     experiment = client.get_experiment_by_name(args.experiment)

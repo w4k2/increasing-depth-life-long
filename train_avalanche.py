@@ -1,5 +1,4 @@
 import argparse
-from avalanche.training.strategies.strategy_wrappers import PNNStrategy
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -83,7 +82,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--run_name', default=None, help='mlflow run name')
-    parser.add_argument('--experiment', default='Default', help='flow experiment name')
+    parser.add_argument('--experiment', default='Default', help='mlflow experiment name')
     parser.add_argument('--nested_run', action='store_true', help='create nested run in mlflow')
 
     parser.add_argument('--method', default='agem', choices=('baseline', 'cumulative', 'll-stochastic-depth', 'ewc', 'si', 'gem', 'agem', 'pnn', 'replay', 'lwf'))
@@ -95,7 +94,7 @@ def parse_args():
     parser.add_argument('--train_on_experiences', default=50, type=int)
     parser.add_argument('--device', default='cuda', type=str)
     parser.add_argument('--batch_size', default=10, type=int)
-    parser.add_argument('--num_workers', default=20, type=int)
+    parser.add_argument('--num_workers', default=10, type=int)
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--n_epochs', default=1, type=int)
     parser.add_argument('--image_size', default=64, type=int)
@@ -385,7 +384,7 @@ def get_base_model_ll(model_name, num_classes, input_channels, pretrained=False,
 def get_base_strategy(batch_size, n_epochs, device, model, plugins, evaluation_plugin, lr, weight_decay):
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, amsgrad=False)
     criterion = nn.CrossEntropyLoss()
-    strategy = BaseStrategy(model, optimizer, criterion, train_mb_size=batch_size, eval_mb_size=batch_size,
+    strategy = SupervisedTemplate(model, optimizer, criterion, train_mb_size=batch_size, eval_mb_size=batch_size,
                             train_epochs=n_epochs, plugins=plugins, device=device, evaluator=evaluation_plugin,
                             eval_every=-1)
     return strategy

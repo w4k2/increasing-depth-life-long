@@ -20,7 +20,14 @@ def main():
         parrent_run_id = active_run.info.run_id
         grid_search(args)
 
-    run_best_paramters(args, client, experiment, parrent_run_id)
+    n_repeats = 5
+    args = select_best_paramters(args, client, experiment, parrent_run_id)
+
+    with mlflow.start_run(experiment_id=experiment_id, run_name=f'{args.method} final'):
+        for repeat in range(n_repeats):
+            args.run_name = f'{args.method} final run {repeat}'
+            args.seed += 1
+            run_experiment(args)
 
 
 def grid_search(args):
@@ -36,7 +43,7 @@ def grid_search(args):
                 run_experiment(args)
 
 
-def run_best_paramters(args, client, experiment, parrent_run_id):
+def select_best_paramters(args, client, experiment, parrent_run_id):
     experiment_id = experiment.experiment_id
     best_run = select_best(client, parrent_run_id, experiment_id, method='avrg_acc')
     best_parameters = best_run.data.params
@@ -54,15 +61,12 @@ def run_best_paramters(args, client, experiment, parrent_run_id):
         else:
             value = arg_type(value)
         setattr(args, name, value)
-    args.run_name = f'{args.method} final'
-    args.seed = 43
-    args.nested_run = False
 
     print('\nbest args')
     for name, value in vars(args).items():
         print(f'\t{name}: {value}, type = {type(value)}')
 
-    run_experiment(args)
+    return args
 
 
 def select_best(client, parrent_run_id, experiment_id, method='avrg_acc'):

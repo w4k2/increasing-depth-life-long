@@ -9,6 +9,7 @@ import functools
 import models.stochastic_depth_lifelong as stochastic_depth_lifelong
 import models.stochastic_depth as stochastic_depth
 import models.resnet as resnet
+import models.reduced_resnet as reduced_resnet
 import distutils.util
 
 from avalanche.benchmarks.datasets import MNIST, FashionMNIST, CIFAR10
@@ -86,7 +87,7 @@ def parse_args():
     parser.add_argument('--nested_run', action='store_true', help='create nested run in mlflow')
 
     parser.add_argument('--method', default='agem', choices=('baseline', 'cumulative', 'll-stochastic-depth', 'ewc', 'si', 'gem', 'agem', 'pnn', 'replay', 'lwf'))
-    parser.add_argument('--base_model', default='resnet18', choices=('resnet9', 'resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
+    parser.add_argument('--base_model', default='resnet18', choices=('resnet9', 'resnet18', 'reduced_resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
     parser.add_argument('--pretrained', default=True, type=distutils.util.strtobool, help='if True load weights pretrained on imagenet')
     parser.add_argument('--dataset', default='permutation-mnist', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist', 'tiny-imagenet',
                         'cifar10-mnist-fashion-mnist', 'mnist-fashion-mnist-cifar10', 'fashion-mnist-cifar10-mnist', 'cores50'))
@@ -352,6 +353,8 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
 def get_base_model(model_name, num_classes=10, input_channels=3, pretrained=False):
     if model_name == 'resnet18':
         model = resnet.resnet18(num_classes=num_classes, input_channels=input_channels, pretrained=pretrained)
+    elif model_name == 'reduced_resnet18':
+        model = reduced_resnet.resnet18(num_classes=num_classes, input_channels=input_channels, pretrained=pretrained)
     elif model_name == 'resnet50':
         model = resnet.resnet50(num_classes=num_classes, input_channels=input_channels)
     elif model_name == 'resnet18-stoch':

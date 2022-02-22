@@ -1,0 +1,4 @@
+artifact_location: file:///home/jedrzejkozal/Documents/stochastic-depth-data-streams/mlruns/7
+experiment_id: '7'
+lifecycle_stage: active
+name: CIFAR100pprai

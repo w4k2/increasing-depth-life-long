@@ -15,7 +15,7 @@ from avalanche.benchmarks.datasets import MNIST, FashionMNIST, CIFAR10
 from avalanche.benchmarks.generators import dataset_benchmark
 from avalanche.benchmarks.classic import PermutedMNIST, SplitCIFAR100, SplitMNIST, SplitCIFAR10, SplitTinyImageNet, CORe50
 from avalanche.evaluation.metrics.confusion_matrix import StreamConfusionMatrix
-from avalanche.training.strategies import BaseStrategy, EWC, GEM, Replay, SynapticIntelligence, Cumulative, LwF
+from avalanche.training.strategies import BaseStrategy, EWC, GEM, Replay, SynapticIntelligence, Cumulative, LwF, PNNStrategy
 from avalanche.models import SimpleMLP
 from utils.mlflow_logger import MLFlowLogger
 from avalanche.training.plugins import EvaluationPlugin
@@ -384,7 +384,7 @@ def get_base_model_ll(model_name, num_classes, input_channels, pretrained=False,
 def get_base_strategy(batch_size, n_epochs, device, model, plugins, evaluation_plugin, lr, weight_decay):
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, amsgrad=False)
     criterion = nn.CrossEntropyLoss()
-    strategy = SupervisedTemplate(model, optimizer, criterion, train_mb_size=batch_size, eval_mb_size=batch_size,
+    strategy = BaseStrategy(model, optimizer, criterion, train_mb_size=batch_size, eval_mb_size=batch_size,
                             train_epochs=n_epochs, plugins=plugins, device=device, evaluator=evaluation_plugin,
                             eval_every=-1)
     return strategy

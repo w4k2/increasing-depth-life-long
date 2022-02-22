@@ -23,6 +23,7 @@ def main():
 
     n_repeats = 5
     args = select_best_paramters(args, client, experiment, parrent_run_id)
+    args.train_on_experiences = args.n_experiences
 
     with mlflow.start_run(experiment_id=experiment_id, run_name=f'{args.method} final'):
         for repeat in range(n_repeats):

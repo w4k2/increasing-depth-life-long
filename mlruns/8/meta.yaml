@@ -1,4 +1,4 @@
-artifact_location: file:///home/jedrzejkozal/Documents/stochastic-depth-data-streams/mlruns/8
+artifact_location: file:///home/jkozal/Documents/PWr/stochastic_depth/mlruns/8
 experiment_id: '8'
 lifecycle_stage: active
 name: TinyImagenetpprai

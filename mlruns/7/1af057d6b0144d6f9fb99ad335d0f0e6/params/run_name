@@ -1,0 +1,1 @@
+agem, lr=0.001, n_epochs=20, weight_decay=1e-05

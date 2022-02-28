@@ -1,7 +1,7 @@
 artifact_uri: file:///home/jkozal/Documents/PWr/stochastic_depth/mlruns/1/da2435b32f3c41f58a96e896b07ea228/artifacts
 end_time: 1645809089223
 entry_point_name: ''
-experiment_id: '1'
+experiment_id: '8'
 lifecycle_stage: active
 name: ''
 run_id: da2435b32f3c41f58a96e896b07ea228

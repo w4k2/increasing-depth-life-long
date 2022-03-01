@@ -1,5 +1,3 @@
-import sys
-
 import torch
 from avalanche.benchmarks.utils.data_loader import _default_collate_mbatches_fn
 from avalanche.models import avalanche_forward
@@ -7,6 +5,8 @@ from avalanche.training.plugins import StrategyPlugin
 from avalanche.training.plugins.evaluation import default_logger
 from avalanche.training.strategies.base_strategy import BaseStrategy
 from torch.utils.data.dataloader import DataLoader
+
+from .rehersal_buffer import RehersalBuffer
 
 
 class AGEMPluginModified(StrategyPlugin):
@@ -113,49 +113,12 @@ class AGEMPluginModified(StrategyPlugin):
         buffer_dataset = RehersalBuffer(self.buffers)
 
         dataloder = DataLoader(buffer_dataset,
-                               batch_size=self.sample_size // len(self.buffers),
-                               num_workers=0,
+                               batch_size=self.sample_size,
+                               num_workers=4,
                                drop_last=False,
                                shuffle=False,
                                collate_fn=_default_collate_mbatches_fn)
         self.buffers_dataloders = iter(dataloder)
-
-
-class RehersalBuffer:
-    def __init__(self, datasets, infinite=True):
-        self.datasets = datasets
-        self.infinite = infinite
-
-    def __getitem__(self, index):
-        inputs = []
-        targets = []
-        task_idx = []
-
-        for dataset in self.datasets:
-            batch = dataset[index % len(dataset)]
-            inputs.append(batch[0])
-            targets.append(batch[1])
-            if len(batch) == 3:
-                task_idx.append(batch[2])
-
-        inputs = torch.stack(inputs)
-        inputs = inputs.to(torch.float32)
-        inputs.requires_grad = False
-        targets = torch.Tensor(targets).to(torch.int64)
-        targets.requires_grad = False
-        if len(batch) == 3:
-            task_idx = torch.Tensor(task_idx).to(torch.int64)
-            task_idx.requires_grad = False
-            return inputs, targets, task_idx
-        return inputs, targets
-
-    def __len__(self):
-        length = None
-        if self.infinite:
-            length = sys.maxsize
-        else:
-            length = sum(len(dataset) for dataset in self.datasets)
-        return length
 
 
 class AGEMModified(BaseStrategy):

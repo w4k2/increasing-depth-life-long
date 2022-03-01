@@ -26,6 +26,7 @@ from utils.custom_plugins import *
 from utils.custom_replay import *
 from utils.custom_cumulative import *
 from utils.custom_agem import *
+from utils.mir import *
 
 import cProfile
 
@@ -85,7 +86,7 @@ def parse_args():
     parser.add_argument('--experiment', default='Default', help='mlflow experiment name')
     parser.add_argument('--nested_run', action='store_true', help='create nested run in mlflow')
 
-    parser.add_argument('--method', default='agem', choices=('baseline', 'cumulative', 'll-stochastic-depth', 'ewc', 'si', 'gem', 'agem', 'pnn', 'replay', 'lwf'))
+    parser.add_argument('--method', default='agem', choices=('baseline', 'cumulative', 'll-stochastic-depth', 'ewc', 'si', 'gem', 'agem', 'pnn', 'replay', 'lwf', 'mir'))
     parser.add_argument('--base_model', default='resnet18', choices=('resnet9', 'resnet18', 'reduced_resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
     parser.add_argument('--pretrained', default=True, type=distutils.util.strtobool, help='if True load weights pretrained on imagenet')
     parser.add_argument('--dataset', default='permutation-mnist', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist', 'tiny-imagenet',
@@ -120,7 +121,8 @@ def get_data(dataset_name, n_experiences, seed, image_size):
         benchmark = SplitCIFAR10(n_experiences=n_experiences,
                                  train_transform=train_transforms,
                                  eval_transform=eval_transforms,
-                                 seed=seed
+                                 seed=seed,
+                                 return_task_id=True
                                  )
         classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'cifar100':
@@ -343,6 +345,13 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
         criterion = nn.CrossEntropyLoss()
         strategy = LwF(model, optimizer, criterion, alpha=1.0, temperature=1.0,
+                       train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
+                       train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
+    elif args.method == 'mir':
+        model = resnet.resnet18_multihead(num_classes=classes_per_task[0], input_channels=input_channels, pretrained=args.pretrained)
+        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
+        criterion = nn.CrossEntropyLoss()
+        strategy = Mir(model, optimizer, criterion, patterns_per_exp=250, sample_size=50,
                        train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
                        train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
 

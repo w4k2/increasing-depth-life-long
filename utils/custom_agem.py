@@ -113,7 +113,7 @@ class AGEMPluginModified(StrategyPlugin):
         buffer_dataset = RehersalBuffer(self.buffers)
 
         dataloder = DataLoader(buffer_dataset,
-                               batch_size=self.sample_size,
+                               batch_size=self.sample_size // len(self.buffers),
                                num_workers=4,
                                drop_last=False,
                                shuffle=False,

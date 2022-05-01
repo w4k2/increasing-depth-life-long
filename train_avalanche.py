@@ -85,6 +85,7 @@ def parse_args():
     parser.add_argument('--run_name', default=None, help='mlflow run name')
     parser.add_argument('--experiment', default='Default', help='mlflow experiment name')
     parser.add_argument('--nested_run', action='store_true', help='create nested run in mlflow')
+    parser.add_argument('--debug', action='store_true', help='if true, execute only one iteration in training epoch')
 
     parser.add_argument('--method', default='agem', choices=('baseline', 'cumulative', 'll-stochastic-depth', 'ewc', 'si', 'gem', 'agem', 'pnn', 'replay', 'lwf', 'mir'))
     parser.add_argument('--base_model', default='resnet18', choices=('resnet9', 'resnet18', 'reduced_resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
@@ -93,20 +94,22 @@ def parse_args():
                         'cifar10-mnist-fashion-mnist', 'mnist-fashion-mnist-cifar10', 'fashion-mnist-cifar10-mnist', 'cores50'))
     parser.add_argument('--n_experiences', default=50, type=int)
     parser.add_argument('--train_on_experiences', default=50, type=int)
+    parser.add_argument('--forgetting_stopping_threshold', default=0.5, type=float)
+
+    parser.add_argument('--lr', default=0.0001, type=float)
+    parser.add_argument('--momentum', default=0.8, type=float)
+    parser.add_argument('--weight_decay', default=1e-6, type=float)
     parser.add_argument('--device', default='cuda', type=str)
     parser.add_argument('--batch_size', default=10, type=int)
     parser.add_argument('--num_workers', default=10, type=int)
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--n_epochs', default=1, type=int)
     parser.add_argument('--image_size', default=64, type=int)
-    parser.add_argument('--debug', action='store_true', help='if true, execute only one iteration in training epoch')
 
-    parser.add_argument('--lr', default=0.0001, type=float)
-    parser.add_argument('--momentum', default=0.8, type=float)
-    parser.add_argument('--weight_decay', default=1e-6, type=float)
     parser.add_argument('--entropy_threshold', default=0.7, type=float, help='entropy threshold for adding new node attached directly to backbone')  # 0.8 for cifar100
     parser.add_argument('--update_method', default='entropy', choices=('entropy', 'sequential', 'parallel'))
-    parser.add_argument('--forgetting_stopping_threshold', default=0.5, type=float)
+    parser.add_argument('--prob_begin', default=1.0, type=float, help='parameter for stochastic depth network')
+    parser.add_argument('--prob_end', default=0.5, type=float, help='parameter for stochastic depth network')
 
     args = parser.parse_args()
     return args
@@ -293,7 +296,8 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
                                       )
 
     elif args.method == 'll-stochastic-depth':
-        model = get_base_model_ll(args.base_model, classes_per_task[0], input_channels, pretrained=args.pretrained, update_method=args.update_method)
+        model = get_base_model_ll(args.base_model, classes_per_task[0], input_channels, pretrained=args.pretrained,
+                                  prob_begin=args.prob_begin, prob_end=args.prob_end, update_method=args.update_method)
         plugins.append(StochasticDepthPlugin(args.entropy_threshold, device))
         strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugins, evaluation_plugin, args.lr, args.weight_decay)
     elif args.method == 'ewc':
@@ -378,11 +382,18 @@ def get_base_model(model_name, num_classes=10, input_channels=3, pretrained=Fals
     return model
 
 
-def get_base_model_ll(model_name, num_classes, input_channels, pretrained=False, update_method='entropy'):
+def get_base_model_ll(model_name, num_classes, input_channels, pretrained=False, prob_begin=1.0, prob_end=0.5, update_method='entropy'):
     if 'resnet9' in model_name:
         model = stochastic_depth_lifelong.resnet9_StoDepth_lineardecay(num_classes=num_classes, input_channels=input_channels, update_method=update_method)
     elif 'resnet18' in model_name:
-        model = stochastic_depth_lifelong.resnet18_StoDepth_lineardecay(num_classes=num_classes, input_channels=input_channels, pretrained=pretrained, update_method=update_method)
+        model = stochastic_depth_lifelong.resnet18_StoDepth_lineardecay(
+            prob_begin=prob_begin,
+            prob_end=prob_end,
+            num_classes=num_classes,
+            input_channels=input_channels,
+            pretrained=pretrained,
+            update_method=update_method
+        )
     elif 'resnet50' in model_name:
         model = stochastic_depth_lifelong.resnet50_StoDepth_lineardecay(num_classes=num_classes, input_channels=input_channels, update_method=update_method)
     else:

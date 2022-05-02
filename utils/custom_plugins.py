@@ -99,10 +99,12 @@ class BaselinePlugin(ConvertedLabelsPlugin):
 
 
 class StochasticDepthPlugin(ConvertedLabelsPlugin):
-    def __init__(self, entropy_threshold, device):
+    def __init__(self, entropy_threshold, device, lr=0.0001, weight_decay=1e-6):
         super().__init__()
         self.device = device
         self.entropy_threshold = entropy_threshold
+        self.lr = lr
+        self.weight_decay = weight_decay
 
     def before_training_exp(self, strategy, **kwargs):
         task_id = strategy.experience.current_experience
@@ -111,7 +113,11 @@ class StochasticDepthPlugin(ConvertedLabelsPlugin):
         num_classes = len(strategy.experience.classes_in_this_experience)
         strategy.model.update_structure(task_id, strategy.dataloader, num_classes, self.device, self.entropy_threshold)
 
-        strategy.optimizer = optim.Adam([{'params': filter(lambda p: p.requires_grad, strategy.model.parameters())}], lr=0.0001, weight_decay=1e-6, amsgrad=False)
+        strategy.optimizer = optim.Adam(
+            params=[{'params': filter(lambda p: p.requires_grad, strategy.model.parameters())}],
+            lr=self.lr,
+            weight_decay=self.weight_decay,
+            amsgrad=False)
         print('training od task id = ', task_id)
 
     def before_eval_exp(self, strategy, **kwargs):
@@ -122,4 +128,3 @@ class StochasticDepthPlugin(ConvertedLabelsPlugin):
             task_path = strategy.model.tasks_paths[task_id]
             print('selected path = ', task_path)
             strategy.model.set_path(task_path)
-

@@ -306,7 +306,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
     elif args.method == 'll-stochastic-depth':
         model = get_base_model_ll(args.base_model, classes_per_task[0], input_channels, pretrained=args.pretrained,
                                   prob_begin=args.prob_begin, prob_end=args.prob_end, update_method=args.update_method)
-        plugins.append(StochasticDepthPlugin(args.entropy_threshold, device))
+        plugins.append(StochasticDepthPlugin(args.entropy_threshold, device, args.lr, args.weight_decay))
         strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugins, evaluation_plugin, args.lr, args.weight_decay)
     elif args.method == 'ewc':
         model = resnet.resnet18_multihead(num_classes=classes_per_task[0], input_channels=input_channels, pretrained=args.pretrained)
@@ -341,9 +341,10 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
                                 train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
     elif args.method == 'pnn':
         model = PNN(num_layers=5, in_features=3, hidden_features_per_column=64, classifier_in_size=65536)
-        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
+        optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay, amsgrad=False)
         criterion = nn.CrossEntropyLoss()
-        strategy = PNNStrategy(model, optimizer, criterion, train_mb_size=args.batch_size, eval_mb_size=args.batch_size,
+        strategy = PNNModified(model, optimizer, criterion, args.lr, args.weight_decay,
+                               train_mb_size=args.batch_size, eval_mb_size=args.batch_size,
                                train_epochs=args.n_epochs, device=device, evaluator=evaluation_plugin, eval_every=-1)
     elif args.method == 'replay':
         model = resnet.resnet18_multihead(num_classes=classes_per_task[0], input_channels=input_channels, pretrained=args.pretrained)

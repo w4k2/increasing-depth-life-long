@@ -20,7 +20,7 @@ from utils.mlflow_logger import MLFlowLogger
 from avalanche.training.plugins import EvaluationPlugin
 from avalanche.evaluation.metrics import accuracy_metrics, loss_metrics, forgetting_metrics
 
-from avalanche.logging import InteractiveLogger
+from avalanche.logging import InteractiveLogger, TextLogger
 from utils.custom_plugins import *
 from utils.custom_replay import *
 from utils.custom_cumulative import *
@@ -86,6 +86,7 @@ def parse_args():
     parser.add_argument('--experiment', default='Default', help='mlflow experiment name')
     parser.add_argument('--nested_run', action='store_true', help='create nested run in mlflow')
     parser.add_argument('--debug', action='store_true', help='if true, execute only one iteration in training epoch')
+    parser.add_argument('--interactive_logger', default=True, type=distutils.util.strtobool, help='if True use interactive logger with tqdm for printing in console')
 
     parser.add_argument('--method', default='agem', choices=('baseline', 'cumulative', 'll-stochastic-depth', 'ewc', 'si', 'gem', 'agem', 'pnn', 'replay', 'lwf', 'mir'))
     parser.add_argument('--base_model', default='resnet18', choices=('resnet9', 'resnet18', 'reduced_resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
@@ -261,7 +262,11 @@ def get_mnist_transforms(norm_stats, image_size):
 
 
 def get_method(args, device, classes_per_task, use_mlflow=True):
-    loggers = [InteractiveLogger()]
+    loggers = list()
+    if args.interactive_logger:
+        loggers.append(InteractiveLogger())
+    else:
+        loggers.append(TextLogger())
 
     mlf_logger = None
     if use_mlflow:

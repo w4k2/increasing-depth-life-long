@@ -1,4 +1,4 @@
-name: ll-stochastic-depth
+name: ll-increasing-depth
 channels:
   - pytorch
   - default
@@ -15,9 +15,9 @@ dependencies:
   - seaborn
   - pylint
   - rope
-  - mlflow=1.22
+  - mlflow=1.23
   - seaborn
   - pytest
   - pip
   - pip:
-    - avalanche-lib
+    - avalanche-lib==0.1.0

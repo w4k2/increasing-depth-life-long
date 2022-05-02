@@ -1,0 +1,1 @@
+RandomResizedCrop(image_size, scale=(0.08, 1.0), ratio=(0.75, 1.33)),RandomHorizontalFlip(p=0.5),ToTensor(),Normalize(*norm_stats)

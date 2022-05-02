@@ -3,6 +3,7 @@ import torch.nn as nn
 from torch.nn.modules.instancenorm import InstanceNorm2d
 import torch.utils.model_zoo as model_zoo
 import torch
+import torchvision
 
 import avalanche.models
 
@@ -46,7 +47,6 @@ class StoDepth_BasicBlock(nn.Module):
         self.m = torch.distributions.bernoulli.Bernoulli(torch.Tensor([self.prob]))
 
     def forward(self, x):
-        # print('StoDepth_BasicBlock forward call')
         identity = x.clone()
 
         if self.training:
@@ -110,7 +110,6 @@ class StoDepth_Bottleneck(nn.Module):
         self.m = torch.distributions.bernoulli.Bernoulli(torch.Tensor([self.prob]))
 
     def forward(self, x):
-        # print('StoDepth_Bottleneck forward call')
         identity = x.clone()
 
         if self.training:
@@ -460,7 +459,6 @@ def resnet18_StoDepth_lineardecay(pretrained=False, prob_begin=1, prob_end=0.5, 
     """
     model = ResNet_StoDepth(StoDepth_BasicBlock, prob_begin, prob_end, [2, 2, 2, 2], **kwargs)
     if pretrained:
-        import torchvision
         model_tmp = torchvision.models.resnet18(pretrained=True)
         state_dict = model_tmp.state_dict()
         state_dict = {key: value for key, value in state_dict.items() if key in model.state_dict() and type(model._modules[key.rsplit('.')[0]]) != InstanceNorm2d}

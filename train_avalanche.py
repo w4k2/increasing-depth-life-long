@@ -1,21 +1,20 @@
 import argparse
-from avalanche.training.strategies.strategy_wrappers import PNNStrategy
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchvision
-import torchvision.transforms as transf
 import functools
 import models.stochastic_depth_lifelong as stochastic_depth_lifelong
 import models.stochastic_depth as stochastic_depth
 import models.resnet as resnet
+import models.reduced_resnet as reduced_resnet
 import distutils.util
 
 from avalanche.benchmarks.datasets import MNIST, FashionMNIST, CIFAR10
 from avalanche.benchmarks.generators import dataset_benchmark
 from avalanche.benchmarks.classic import PermutedMNIST, SplitCIFAR100, SplitMNIST, SplitCIFAR10, SplitTinyImageNet, CORe50
 from avalanche.evaluation.metrics.confusion_matrix import StreamConfusionMatrix
-from avalanche.training.strategies import BaseStrategy, EWC, GEM, Replay, SynapticIntelligence, Cumulative, LwF
+from avalanche.training.strategies import BaseStrategy, EWC, GEM, Replay, SynapticIntelligence, Cumulative, LwF, PNNStrategy
 from avalanche.models import SimpleMLP
 from utils.mlflow_logger import MLFlowLogger
 from avalanche.training.plugins import EvaluationPlugin
@@ -25,6 +24,9 @@ from avalanche.logging import InteractiveLogger
 from utils.custom_plugins import *
 from utils.custom_replay import *
 from utils.custom_cumulative import *
+from utils.custom_agem import *
+from utils.mir import *
+from torchvision.transforms import *
 
 import cProfile
 
@@ -38,7 +40,7 @@ def run_experiment(args):
     torch.set_num_threads(1)
 
     device = torch.device(args.device)
-    train_stream, test_stream, classes_per_task = get_data(args.dataset, args.n_experiences, args.seed, args.image_size)
+    train_stream, test_stream, classes_per_task = get_data(args.dataset, args.n_experiences, args.seed, args.image_size, args.train_aug, args.test_aug)
     strategy, mlf_logger = get_method(args, device, classes_per_task, use_mlflow=not args.debug)
 
     results = []
@@ -81,50 +83,56 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--run_name', default=None, help='mlflow run name')
-    parser.add_argument('--experiment', default='Default', help='flow experiment name')
+    parser.add_argument('--experiment', default='Default', help='mlflow experiment name')
     parser.add_argument('--nested_run', action='store_true', help='create nested run in mlflow')
+    parser.add_argument('--debug', action='store_true', help='if true, execute only one iteration in training epoch')
 
-    parser.add_argument('--method', default='agem', choices=('baseline', 'cumulative', 'll-stochastic-depth', 'ewc', 'si', 'gem', 'agem', 'pnn', 'replay', 'lwf'))
-    parser.add_argument('--base_model', default='resnet18', choices=('resnet9', 'resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
+    parser.add_argument('--method', default='agem', choices=('baseline', 'cumulative', 'll-stochastic-depth', 'ewc', 'si', 'gem', 'agem', 'pnn', 'replay', 'lwf', 'mir'))
+    parser.add_argument('--base_model', default='resnet18', choices=('resnet9', 'resnet18', 'reduced_resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
     parser.add_argument('--pretrained', default=True, type=distutils.util.strtobool, help='if True load weights pretrained on imagenet')
     parser.add_argument('--dataset', default='permutation-mnist', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist', 'tiny-imagenet',
                         'cifar10-mnist-fashion-mnist', 'mnist-fashion-mnist-cifar10', 'fashion-mnist-cifar10-mnist', 'cores50'))
     parser.add_argument('--n_experiences', default=50, type=int)
     parser.add_argument('--train_on_experiences', default=50, type=int)
-    parser.add_argument('--device', default='cuda', type=str)
-    parser.add_argument('--batch_size', default=10, type=int)
-    parser.add_argument('--num_workers', default=20, type=int)
-    parser.add_argument('--seed', default=42, type=int)
-    parser.add_argument('--n_epochs', default=1, type=int)
-    parser.add_argument('--image_size', default=64, type=int)
-    parser.add_argument('--debug', action='store_true', help='if true, execute only one iteration in training epoch')
+    parser.add_argument('--forgetting_stopping_threshold', default=0.5, type=float)
 
     parser.add_argument('--lr', default=0.0001, type=float)
     parser.add_argument('--momentum', default=0.8, type=float)
     parser.add_argument('--weight_decay', default=1e-6, type=float)
+    parser.add_argument('--device', default='cuda', type=str)
+    parser.add_argument('--batch_size', default=10, type=int)
+    parser.add_argument('--num_workers', default=10, type=int)
+    parser.add_argument('--seed', default=42, type=int)
+    parser.add_argument('--n_epochs', default=1, type=int)
+    parser.add_argument('--train_aug', default='RandomResizedCrop(image_size, scale=(0.9, 1.0), ratio=(0.75, 1.33)),RandomHorizontalFlip(p=0.5),ToTensor(),Normalize(*norm_stats)', type=str)
+    parser.add_argument('--test_aug', default='Resize((image_size, image_size)),ToTensor(),Normalize(*norm_stats)', type=str)
+    parser.add_argument('--image_size', default=64, type=int)
+
     parser.add_argument('--entropy_threshold', default=0.7, type=float, help='entropy threshold for adding new node attached directly to backbone')  # 0.8 for cifar100
     parser.add_argument('--update_method', default='entropy', choices=('entropy', 'sequential', 'parallel'))
-    parser.add_argument('--forgetting_stopping_threshold', default=0.5, type=float)
+    parser.add_argument('--prob_begin', default=1.0, type=float, help='parameter for stochastic depth network')
+    parser.add_argument('--prob_end', default=0.5, type=float, help='parameter for stochastic depth network')
 
     args = parser.parse_args()
     return args
 
 
-def get_data(dataset_name, n_experiences, seed, image_size):
+def get_data(dataset_name, n_experiences, seed, image_size, train_aug, test_aug):
     benchmark = None
     test_stream = None
     if dataset_name == 'cifar10':
         norm_stats = (0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)
-        train_transforms, eval_transforms = get_transforms(norm_stats, image_size)
+        train_transforms, eval_transforms = get_transforms(norm_stats, image_size, train_aug, test_aug)
         benchmark = SplitCIFAR10(n_experiences=n_experiences,
                                  train_transform=train_transforms,
                                  eval_transform=eval_transforms,
-                                 seed=seed
+                                 seed=seed,
+                                 return_task_id=True
                                  )
         classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'cifar100':
         norm_stats = (0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)
-        train_transforms, eval_transforms = get_transforms(norm_stats, image_size)
+        train_transforms, eval_transforms = get_transforms(norm_stats, image_size, train_aug, test_aug)
         benchmark = SplitCIFAR100(n_experiences=n_experiences,
                                   train_transform=train_transforms,
                                   eval_transform=eval_transforms,
@@ -134,7 +142,7 @@ def get_data(dataset_name, n_experiences, seed, image_size):
         classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'mnist':
         norm_stats = (0.1307,), (0.3081,)
-        train_transforms, eval_transforms = get_transforms(norm_stats, image_size, use_hflip=False, stack_channels=True)
+        train_transforms, eval_transforms = get_mnist_transforms(norm_stats, image_size)
         benchmark = SplitMNIST(n_experiences=n_experiences,
                                train_transform=train_transforms,
                                eval_transform=eval_transforms,
@@ -143,7 +151,7 @@ def get_data(dataset_name, n_experiences, seed, image_size):
         classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'permutation-mnist':
         norm_stats = (0.1307,), (0.3081,)
-        train_transforms, eval_transforms = get_transforms(norm_stats, image_size, use_hflip=False, stack_channels=True)
+        train_transforms, eval_transforms = get_mnist_transforms(norm_stats, image_size)
         benchmark = PermutedMNIST(n_experiences=n_experiences,
                                   train_transform=train_transforms,
                                   eval_transform=eval_transforms,
@@ -152,7 +160,7 @@ def get_data(dataset_name, n_experiences, seed, image_size):
         classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'tiny-imagenet':
         norm_stats = (0.4443, 0.4395, 0.4250), (0.3138, 0.3181, 0.3182)
-        train_transforms, eval_transforms = get_transforms(norm_stats, image_size)
+        train_transforms, eval_transforms = get_transforms(norm_stats, image_size, train_aug, test_aug)
         benchmark = SplitTinyImageNet(n_experiences=n_experiences,
                                       train_transform=train_transforms,
                                       eval_transform=eval_transforms,
@@ -171,7 +179,7 @@ def get_data(dataset_name, n_experiences, seed, image_size):
         classes_per_task = [10, 10, 10]
     elif dataset_name == 'cores50':
         norm_stats = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
-        train_transforms, eval_transforms = get_transforms(norm_stats, image_size)
+        train_transforms, eval_transforms = get_transforms(norm_stats, image_size, train_aug, test_aug)
         benchmark = CORe50(scenario="nc", train_transform=train_transforms, eval_transform=eval_transforms)
         classes_per_task = [len(exp.classes_in_this_experience) for exp in benchmark.train_stream]
 
@@ -206,8 +214,8 @@ def get_multidataset_benchmark(order, image_size):
     fmnist_norm_stats = (0.2860,), (0.3530,)
 
     cifar10_train_transforms, cifar10_eval_transforms = get_transforms(cifar10_norm_stats, image_size)
-    mnist_train_transforms, mnist_eval_transforms = get_transforms(mnist_norm_stats, image_size, use_hflip=False, stack_channels=True)
-    fmnist_train_transforms, fmnist_eval_transforms = get_transforms(fmnist_norm_stats, image_size, use_hflip=False, stack_channels=True)
+    mnist_train_transforms, mnist_eval_transforms = get_mnist_transforms(mnist_norm_stats, image_size)
+    fmnist_train_transforms, fmnist_eval_transforms = get_mnist_transforms(fmnist_norm_stats, image_size)
 
     train_datasets = []
     test_datasets = []
@@ -229,26 +237,26 @@ def get_multidataset_benchmark(order, image_size):
     return benchmark
 
 
-def get_transforms(norm_stats, image_size, use_hflip=True, stack_channels=False):
-    train_list = [
-        transf.Resize((image_size, image_size)),
-        transf.ToTensor(),
-        transf.Normalize(*norm_stats)
-    ]
-    if use_hflip:
-        train_list.insert(0, transf.RandomHorizontalFlip(p=0.5))
-    if stack_channels:
-        train_list.append(transf.Lambda(lambda x: torch.cat([x, x, x], dim=0)))
-    train_transforms = transf.Compose(train_list)
+def get_transforms(norm_stats, image_size, train_aug, test_aug):
+    train_transforms = parse_augmentations(train_aug, image_size, norm_stats)
+    eval_transforms = parse_augmentations(test_aug, image_size, norm_stats)
+    return train_transforms, eval_transforms
 
-    eval_list = [
-        transf.Resize((image_size, image_size)),
-        transf.ToTensor(),
-        transf.Normalize(*norm_stats)
+
+def parse_augmentations(augmentations_str, image_size, norm_stats):
+    aug = eval(augmentations_str)
+    return Compose(aug)
+
+
+def get_mnist_transforms(norm_stats, image_size):
+    transform_list = [
+        Resize((image_size, image_size)),
+        ToTensor(),
+        Normalize(*norm_stats),
+        Lambda(lambda x: torch.cat([x, x, x], dim=0))
     ]
-    if stack_channels:
-        eval_list.append(transf.Lambda(lambda x: torch.cat([x, x, x], dim=0)))
-    eval_transforms = transf.Compose(eval_list)
+    train_transforms = Compose(transform_list)
+    eval_transforms = Compose(transform_list)
     return train_transforms, eval_transforms
 
 
@@ -290,7 +298,8 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
                                       )
 
     elif args.method == 'll-stochastic-depth':
-        model = get_base_model_ll(args.base_model, classes_per_task[0], input_channels, pretrained=args.pretrained, update_method=args.update_method)
+        model = get_base_model_ll(args.base_model, classes_per_task[0], input_channels, pretrained=args.pretrained,
+                                  prob_begin=args.prob_begin, prob_end=args.prob_end, update_method=args.update_method)
         plugins.append(StochasticDepthPlugin(args.entropy_threshold, device))
         strategy = get_base_strategy(args.batch_size, args.n_epochs, device, model, plugins, evaluation_plugin, args.lr, args.weight_decay)
     elif args.method == 'ewc':
@@ -344,6 +353,13 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         strategy = LwF(model, optimizer, criterion, alpha=1.0, temperature=1.0,
                        train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
                        train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
+    elif args.method == 'mir':
+        model = resnet.resnet18_multihead(num_classes=classes_per_task[0], input_channels=input_channels, pretrained=args.pretrained)
+        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
+        criterion = nn.CrossEntropyLoss()
+        strategy = Mir(model, optimizer, criterion, patterns_per_exp=250, sample_size=50,
+                       train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
+                       train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
 
     return strategy, mlf_logger
 
@@ -351,6 +367,8 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
 def get_base_model(model_name, num_classes=10, input_channels=3, pretrained=False):
     if model_name == 'resnet18':
         model = resnet.resnet18(num_classes=num_classes, input_channels=input_channels, pretrained=pretrained)
+    elif model_name == 'reduced_resnet18':
+        model = reduced_resnet.resnet18(num_classes=num_classes, input_channels=input_channels, pretrained=pretrained)
     elif model_name == 'resnet50':
         model = resnet.resnet50(num_classes=num_classes, input_channels=input_channels)
     elif model_name == 'resnet18-stoch':
@@ -366,11 +384,18 @@ def get_base_model(model_name, num_classes=10, input_channels=3, pretrained=Fals
     return model
 
 
-def get_base_model_ll(model_name, num_classes, input_channels, pretrained=False, update_method='entropy'):
+def get_base_model_ll(model_name, num_classes, input_channels, pretrained=False, prob_begin=1.0, prob_end=0.5, update_method='entropy'):
     if 'resnet9' in model_name:
         model = stochastic_depth_lifelong.resnet9_StoDepth_lineardecay(num_classes=num_classes, input_channels=input_channels, update_method=update_method)
     elif 'resnet18' in model_name:
-        model = stochastic_depth_lifelong.resnet18_StoDepth_lineardecay(num_classes=num_classes, input_channels=input_channels, pretrained=pretrained, update_method=update_method)
+        model = stochastic_depth_lifelong.resnet18_StoDepth_lineardecay(
+            prob_begin=prob_begin,
+            prob_end=prob_end,
+            num_classes=num_classes,
+            input_channels=input_channels,
+            pretrained=pretrained,
+            update_method=update_method
+        )
     elif 'resnet50' in model_name:
         model = stochastic_depth_lifelong.resnet50_StoDepth_lineardecay(num_classes=num_classes, input_channels=input_channels, update_method=update_method)
     else:

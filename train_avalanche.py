@@ -3,7 +3,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchvision
-import torchvision.transforms as transf
 import functools
 import models.stochastic_depth_lifelong as stochastic_depth_lifelong
 import models.stochastic_depth as stochastic_depth
@@ -27,6 +26,7 @@ from utils.custom_replay import *
 from utils.custom_cumulative import *
 from utils.custom_agem import *
 from utils.mir import *
+from torchvision.transforms import *
 
 import cProfile
 
@@ -40,7 +40,7 @@ def run_experiment(args):
     torch.set_num_threads(1)
 
     device = torch.device(args.device)
-    train_stream, test_stream, classes_per_task = get_data(args.dataset, args.n_experiences, args.seed, args.image_size)
+    train_stream, test_stream, classes_per_task = get_data(args.dataset, args.n_experiences, args.seed, args.image_size, args.train_aug, args.test_aug)
     strategy, mlf_logger = get_method(args, device, classes_per_task, use_mlflow=not args.debug)
 
     results = []
@@ -104,6 +104,8 @@ def parse_args():
     parser.add_argument('--num_workers', default=10, type=int)
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--n_epochs', default=1, type=int)
+    parser.add_argument('--train_aug', default='RandomResizedCrop(image_size, scale=(0.9, 1.0), ratio=(0.75, 1.33)),RandomHorizontalFlip(p=0.5),ToTensor(),Normalize(*norm_stats)', type=str)
+    parser.add_argument('--test_aug', default='Resize((image_size, image_size)),ToTensor(),Normalize(*norm_stats)', type=str)
     parser.add_argument('--image_size', default=64, type=int)
 
     parser.add_argument('--entropy_threshold', default=0.7, type=float, help='entropy threshold for adding new node attached directly to backbone')  # 0.8 for cifar100
@@ -115,12 +117,12 @@ def parse_args():
     return args
 
 
-def get_data(dataset_name, n_experiences, seed, image_size):
+def get_data(dataset_name, n_experiences, seed, image_size, train_aug, test_aug):
     benchmark = None
     test_stream = None
     if dataset_name == 'cifar10':
         norm_stats = (0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)
-        train_transforms, eval_transforms = get_transforms(norm_stats, image_size)
+        train_transforms, eval_transforms = get_transforms(norm_stats, image_size, train_aug, test_aug)
         benchmark = SplitCIFAR10(n_experiences=n_experiences,
                                  train_transform=train_transforms,
                                  eval_transform=eval_transforms,
@@ -130,7 +132,7 @@ def get_data(dataset_name, n_experiences, seed, image_size):
         classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'cifar100':
         norm_stats = (0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)
-        train_transforms, eval_transforms = get_transforms(norm_stats, image_size)
+        train_transforms, eval_transforms = get_transforms(norm_stats, image_size, train_aug, test_aug)
         benchmark = SplitCIFAR100(n_experiences=n_experiences,
                                   train_transform=train_transforms,
                                   eval_transform=eval_transforms,
@@ -140,7 +142,7 @@ def get_data(dataset_name, n_experiences, seed, image_size):
         classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'mnist':
         norm_stats = (0.1307,), (0.3081,)
-        train_transforms, eval_transforms = get_transforms(norm_stats, image_size, use_hflip=False, stack_channels=True)
+        train_transforms, eval_transforms = get_mnist_transforms(norm_stats, image_size)
         benchmark = SplitMNIST(n_experiences=n_experiences,
                                train_transform=train_transforms,
                                eval_transform=eval_transforms,
@@ -149,7 +151,7 @@ def get_data(dataset_name, n_experiences, seed, image_size):
         classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'permutation-mnist':
         norm_stats = (0.1307,), (0.3081,)
-        train_transforms, eval_transforms = get_transforms(norm_stats, image_size, use_hflip=False, stack_channels=True)
+        train_transforms, eval_transforms = get_mnist_transforms(norm_stats, image_size)
         benchmark = PermutedMNIST(n_experiences=n_experiences,
                                   train_transform=train_transforms,
                                   eval_transform=eval_transforms,
@@ -158,7 +160,7 @@ def get_data(dataset_name, n_experiences, seed, image_size):
         classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'tiny-imagenet':
         norm_stats = (0.4443, 0.4395, 0.4250), (0.3138, 0.3181, 0.3182)
-        train_transforms, eval_transforms = get_transforms(norm_stats, image_size)
+        train_transforms, eval_transforms = get_transforms(norm_stats, image_size, train_aug, test_aug)
         benchmark = SplitTinyImageNet(n_experiences=n_experiences,
                                       train_transform=train_transforms,
                                       eval_transform=eval_transforms,
@@ -177,7 +179,7 @@ def get_data(dataset_name, n_experiences, seed, image_size):
         classes_per_task = [10, 10, 10]
     elif dataset_name == 'cores50':
         norm_stats = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
-        train_transforms, eval_transforms = get_transforms(norm_stats, image_size)
+        train_transforms, eval_transforms = get_transforms(norm_stats, image_size, train_aug, test_aug)
         benchmark = CORe50(scenario="nc", train_transform=train_transforms, eval_transform=eval_transforms)
         classes_per_task = [len(exp.classes_in_this_experience) for exp in benchmark.train_stream]
 
@@ -212,8 +214,8 @@ def get_multidataset_benchmark(order, image_size):
     fmnist_norm_stats = (0.2860,), (0.3530,)
 
     cifar10_train_transforms, cifar10_eval_transforms = get_transforms(cifar10_norm_stats, image_size)
-    mnist_train_transforms, mnist_eval_transforms = get_transforms(mnist_norm_stats, image_size, use_hflip=False, stack_channels=True)
-    fmnist_train_transforms, fmnist_eval_transforms = get_transforms(fmnist_norm_stats, image_size, use_hflip=False, stack_channels=True)
+    mnist_train_transforms, mnist_eval_transforms = get_mnist_transforms(mnist_norm_stats, image_size)
+    fmnist_train_transforms, fmnist_eval_transforms = get_mnist_transforms(fmnist_norm_stats, image_size)
 
     train_datasets = []
     test_datasets = []
@@ -235,26 +237,26 @@ def get_multidataset_benchmark(order, image_size):
     return benchmark
 
 
-def get_transforms(norm_stats, image_size, use_hflip=True, stack_channels=False):
-    train_list = [
-        transf.Resize((image_size, image_size)),
-        transf.ToTensor(),
-        transf.Normalize(*norm_stats)
-    ]
-    if use_hflip:
-        train_list.insert(0, transf.RandomHorizontalFlip(p=0.5))
-    if stack_channels:
-        train_list.append(transf.Lambda(lambda x: torch.cat([x, x, x], dim=0)))
-    train_transforms = transf.Compose(train_list)
+def get_transforms(norm_stats, image_size, train_aug, test_aug):
+    train_transforms = parse_augmentations(train_aug, image_size, norm_stats)
+    eval_transforms = parse_augmentations(test_aug, image_size, norm_stats)
+    return train_transforms, eval_transforms
 
-    eval_list = [
-        transf.Resize((image_size, image_size)),
-        transf.ToTensor(),
-        transf.Normalize(*norm_stats)
+
+def parse_augmentations(augmentations_str, image_size, norm_stats):
+    aug = eval(augmentations_str)
+    return Compose(aug)
+
+
+def get_mnist_transforms(norm_stats, image_size):
+    transform_list = [
+        Resize((image_size, image_size)),
+        ToTensor(),
+        Normalize(*norm_stats),
+        Lambda(lambda x: torch.cat([x, x, x], dim=0))
     ]
-    if stack_channels:
-        eval_list.append(transf.Lambda(lambda x: torch.cat([x, x, x], dim=0)))
-    eval_transforms = transf.Compose(eval_list)
+    train_transforms = Compose(transform_list)
+    eval_transforms = Compose(transform_list)
     return train_transforms, eval_transforms
 
 

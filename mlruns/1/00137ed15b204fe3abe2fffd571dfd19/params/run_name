@@ -1,1 +1,0 @@
-ewc, lr=0.01, n_epochs=1, weight_decay=1e-05

@@ -19,10 +19,12 @@ To acess reulsts or run experiments please create conda environment:
 conda env create -f environment.yml
 ```
 
-This command will create environment ll-stochastic-depth. Please activate it:
+This command will create environment ll-increasing-depth. 
+If instalation of avalanche-lib via pip was not sucessful, please install it manually:
 
 ```
-conda activate ll-stochastic-depth
+conda activate ll-increasing-depth
+pip install avalanche==0.2.0
 ```
 
 ## Experiment results

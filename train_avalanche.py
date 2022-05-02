@@ -14,7 +14,7 @@ from avalanche.benchmarks.datasets import MNIST, FashionMNIST, CIFAR10
 from avalanche.benchmarks.generators import dataset_benchmark
 from avalanche.benchmarks.classic import PermutedMNIST, SplitCIFAR100, SplitMNIST, SplitCIFAR10, SplitTinyImageNet, CORe50
 from avalanche.evaluation.metrics.confusion_matrix import StreamConfusionMatrix
-from avalanche.training.strategies import BaseStrategy, EWC, GEM, Replay, SynapticIntelligence, Cumulative, LwF, PNNStrategy
+from avalanche.training.strategies import BaseStrategy, EWC, GEM, Replay, SynapticIntelligence, Cumulative, LwF
 from avalanche.models import SimpleMLP
 from utils.mlflow_logger import MLFlowLogger
 from avalanche.training.plugins import EvaluationPlugin
@@ -25,6 +25,7 @@ from utils.custom_plugins import *
 from utils.custom_replay import *
 from utils.custom_cumulative import *
 from utils.custom_agem import *
+from utils.custom_pnn import *
 from utils.mir import *
 from torchvision.transforms import *
 
@@ -339,10 +340,10 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
                                 train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
                                 train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
     elif args.method == 'pnn':
-        num_channels = 1 if args.dataset in ('mnist', 'permutation-mnist') else 3
-        in_features = args.image_size * args.image_size * num_channels
-        strategy = PNNStrategy(num_layers=4, in_features=in_features, hidden_features_per_column=256,
-                               lr=args.lr, momentum=args.momentum, train_mb_size=args.batch_size, eval_mb_size=args.batch_size,
+        model = PNN(num_layers=5, in_features=3, hidden_features_per_column=64, classifier_in_size=65536)
+        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
+        criterion = nn.CrossEntropyLoss()
+        strategy = PNNStrategy(model, optimizer, criterion, train_mb_size=args.batch_size, eval_mb_size=args.batch_size,
                                train_epochs=args.n_epochs, device=device, evaluator=evaluation_plugin, eval_every=-1)
     elif args.method == 'replay':
         model = resnet.resnet18_multihead(num_classes=classes_per_task[0], input_channels=input_channels, pretrained=args.pretrained)

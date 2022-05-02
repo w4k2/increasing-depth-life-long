@@ -5,7 +5,6 @@ import torch.utils.model_zoo as model_zoo
 import torch
 import torchvision
 
-import avalanche.models
 
 __all__ = ['ResNet_StoDepth', 'resnet18_StoDepth_lineardecay', 'resnet34_StoDepth_lineardecay', 'resnet50_StoDepth_lineardecay', 'resnet101_StoDepth_lineardecay',
            'resnet152_StoDepth_lineardecay']

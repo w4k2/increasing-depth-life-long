@@ -120,8 +120,8 @@ class ConvAdapter(nn.Module):
         # Eq. 2 - MLP adapter. Not needed for the first task.
         self.V = nn.Conv2d(in_features * num_prev_modules, out_features_per_column, 1)
         self.alphas = nn.Parameter(torch.randn(num_prev_modules))
-        self.U = nn.Conv2d(out_features_per_column, out_features_per_column, 3, padding=1)
-        # self.U = ResBlock(out_features_per_column, out_features_per_column)
+        # self.U = nn.Conv2d(out_features_per_column, out_features_per_column, 3, padding=1)
+        self.U = ResBlock(out_features_per_column, out_features_per_column)
 
     def forward(self, x):
         if self.num_prev_modules == 0:
@@ -181,6 +181,8 @@ class PNNColumn(nn.Module):
         out_features_per_column,
         num_prev_modules,
         layers_type="conv",
+        kernel_size=3,
+        padding=1,
         adapter="mlp",
     ):
         """
@@ -196,7 +198,7 @@ class PNNColumn(nn.Module):
         self.num_prev_modules = num_prev_modules
 
         if layers_type == 'conv':
-            self.itoh = nn.Conv2d(in_features, out_features_per_column, kernel_size=3, padding=1)
+            self.itoh = nn.Conv2d(in_features, out_features_per_column, kernel_size=kernel_size, padding=padding)
         elif layers_type == 'res_block':
             self.itoh = ResBlock(in_features, out_features_per_column)
         else:
@@ -231,7 +233,7 @@ class PNNLayer(MultiTaskModule):
     within the same experience will result in a runtime error.
     """
 
-    def __init__(self, in_features, out_features_per_column, adapter="mlp", layers_type="res_block"):
+    def __init__(self, in_features, out_features_per_column, adapter="mlp", layers_type="res_block", kernel_size=3, padding=1):
         """
         :param in_features: size of each input sample
         :param out_features_per_column:
@@ -246,7 +248,7 @@ class PNNLayer(MultiTaskModule):
 
         # convert from task label to module list order
         self.task_to_module_idx = {}
-        first_col = PNNColumn(in_features, out_features_per_column, 0, adapter=adapter, layers_type=layers_type)
+        first_col = PNNColumn(in_features, out_features_per_column, 0, adapter=adapter, layers_type=layers_type, kernel_size=kernel_size, padding=padding)
         self.columns = nn.ModuleList([first_col])
 
     @property
@@ -331,7 +333,7 @@ class PNN(MultiTaskModule):
         num_layers=1,
         in_features=784,
         hidden_features_per_column=100,
-        layers_type="conv",
+        layers_type="res_block",
         classifier_in_size=None,
         adapter="mlp",
     ):
@@ -351,7 +353,7 @@ class PNN(MultiTaskModule):
 
         self.layers = nn.ModuleList()
         first_layer_type = 'conv' if layers_type == 'res_block' else layers_type
-        self.layers.append(PNNLayer(in_features, hidden_features_per_column, layers_type=first_layer_type))
+        self.layers.append(PNNLayer(in_features, hidden_features_per_column, layers_type=first_layer_type, kernel_size=7, padding=3))
         for _ in range(num_layers - 1):
             layer = PNNLayer(
                 hidden_features_per_column,

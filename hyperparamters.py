@@ -9,6 +9,9 @@ def main():
     args.debug = False
     args.train_on_experiences = 5
     args.seed = 3141592
+    if args.run_name is None:
+        args.run_name = f'{args.method} hyperparameters'
+    run_name = args.run_name
 
     client = mlflow.tracking.MlflowClient()
     experiment = client.get_experiment_by_name(args.experiment)
@@ -17,7 +20,7 @@ def main():
         experiment = client.get_experiment(id)
     experiment_id = experiment.experiment_id
 
-    with mlflow.start_run(experiment_id=experiment_id, run_name=f'{args.method} hyperparameters'):
+    with mlflow.start_run(experiment_id=experiment_id, run_name=run_name):
         active_run = mlflow.active_run()
         parrent_run_id = active_run.info.run_id
         grid_search(args)
@@ -27,7 +30,7 @@ def main():
     args.train_on_experiences = args.n_experiences
     args.forgetting_stopping_threshold = 1.0
 
-    with mlflow.start_run(experiment_id=experiment_id, run_name=f'{args.method} final'):
+    with mlflow.start_run(experiment_id=experiment_id, run_name=f'{run_name} final'):
         for repeat in range(n_repeats):
             args.run_name = f'{args.method} final run {repeat}'
             args.seed += 1

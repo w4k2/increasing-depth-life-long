@@ -1,4 +1,4 @@
-# Increasing Depth of Neural Networks for Life-longLearning
+# Increasing Depth of Neural Networks for Life-long Learning
 
 Code and experiemet results for paper Increasing Depth of Neural Networks for Life-longLearning.
 

@@ -351,7 +351,7 @@ class PNN(MultiTaskModule):
 
     def __init__(
         self,
-        num_layers=1,
+        blocks=(1, 1, 1, 1),
         in_features=784,
         hidden_features_per_column=100,
         layers_type="res_block",
@@ -366,8 +366,8 @@ class PNN(MultiTaskModule):
         :param adapter: adapter type. One of {'linear', 'mlp'} (default='mlp')
         """
         super().__init__()
-        assert num_layers >= 1
-        self.num_layers = num_layers
+        assert len(blocks) >= 1
+        self.num_layers = sum(blocks) + 1
         self.in_features = in_features
         self.out_features_per_columns = hidden_features_per_column
         self.layers_type = layers_type
@@ -375,7 +375,7 @@ class PNN(MultiTaskModule):
         self.layers = nn.ModuleList()
         first_layer_type = 'conv' if layers_type == 'res_block' else layers_type
         self.layers.append(PNNLayer(in_features, hidden_features_per_column, layers_type=first_layer_type, kernel_size=7, padding=3, stride=2))
-        for _ in range(num_layers - 1):
+        for block_size in blocks:
             layer = PNNLayer(
                 hidden_features_per_column,
                 hidden_features_per_column,
@@ -384,6 +384,16 @@ class PNN(MultiTaskModule):
                 stride=2,
             )
             self.layers.append(layer)
+            for _ in range(block_size-1):
+                layer = PNNLayer(
+                    hidden_features_per_column,
+                    hidden_features_per_column,
+                    layers_type=layers_type,
+                    adapter=adapter,
+                    stride=1,
+                )
+                self.layers.append(layer)
+
         self.flatten = nn.Flatten()
         classifier_in_size = hidden_features_per_column if layers_type == "linear" else classifier_in_size
         self.classifier = MultiHeadClassifier(classifier_in_size)

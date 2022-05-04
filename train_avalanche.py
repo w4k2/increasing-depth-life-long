@@ -340,7 +340,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
                                 train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
                                 train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
     elif args.method == 'pnn':
-        model = PNN(num_layers=5, in_features=3, hidden_features_per_column=64, classifier_in_size=262144)
+        model = PNN(num_layers=5, in_features=3, hidden_features_per_column=64, classifier_in_size=256)
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay, amsgrad=False)
         criterion = nn.CrossEntropyLoss()
         strategy = PNNModified(model, optimizer, criterion, args.lr, args.weight_decay,

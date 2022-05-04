@@ -102,7 +102,11 @@ class ConvAdapter(nn.Module):
         in_features,
         out_features_per_column,
         num_prev_modules,
+        kernel_size=3,
+        stride=1,
+        padding=1,
         activation=F.relu,
+        layers_type='conv',
     ):
         """
         :param in_features: size of each input sample
@@ -118,10 +122,18 @@ class ConvAdapter(nn.Module):
             return  # first adapter is empty
 
         # Eq. 2 - MLP adapter. Not needed for the first task.
-        self.V = nn.Conv2d(in_features * num_prev_modules, out_features_per_column, 1)
+        self.V = nn.Sequential(
+            nn.Conv2d(in_features * num_prev_modules, out_features_per_column, 1),
+            nn.InstanceNorm2d(out_features_per_column),
+        )
         self.alphas = nn.Parameter(torch.randn(num_prev_modules))
-        # self.U = nn.Conv2d(out_features_per_column, out_features_per_column, 3, padding=1)
-        self.U = ResBlock(out_features_per_column, out_features_per_column)
+        if layers_type == 'conv':
+            self.U = nn.Sequential(
+                nn.Conv2d(out_features_per_column, out_features_per_column, kernel_size=kernel_size, stride=stride, padding=padding),
+                nn.InstanceNorm2d(out_features_per_column),
+            )
+        else:
+            self.U = ResBlock(out_features_per_column, out_features_per_column, kernel_size=kernel_size, padding=padding, stride=stride)
 
     def forward(self, x):
         if self.num_prev_modules == 0:
@@ -135,22 +147,24 @@ class ConvAdapter(nn.Module):
         for i, el in enumerate(x):
             x[i] = self.alphas[i] * el
         x = torch.cat(x, dim=1)
-        x = self.U(self.activation(self.V(x)))
+        x = self.V(x)
+        x = self.activation(x)
+        x = self.U(x)
         return x
 
 
 class ResBlock(nn.Module):
-    def __init__(self, in_features, out_features, stride=1):
+    def __init__(self, in_features, out_features, stride=1, kernel_size=3, padding=1):
         super().__init__()
-        self.conv1 = nn.Conv2d(in_features, out_features, kernel_size=3, padding=1, stride=stride)  # TODO add stride = 2
+        self.conv1 = nn.Conv2d(in_features, out_features, kernel_size=kernel_size, stride=stride, padding=padding)
         self.bn1 = nn.InstanceNorm2d(out_features)
         self.relu = nn.ReLU(inplace=True)
-        self.conv2 = nn.Conv2d(out_features, out_features, kernel_size=3, padding=1, stride=stride)
+        self.conv2 = nn.Conv2d(out_features, out_features, kernel_size=kernel_size, padding=1, stride=1)
         self.bn2 = nn.InstanceNorm2d(out_features)
         self.downsample = None
         if stride != 1 or in_features != out_features:
             self.downsample = nn.Sequential(
-                nn.Conv2d(in_features, out_features, kernel_size=1, stride=stride),
+                nn.Conv2d(in_features, out_features, kernel_size=kernel_size, stride=stride, padding=padding),
                 nn.InstanceNorm2d(out_features),
             )
 
@@ -164,7 +178,7 @@ class ResBlock(nn.Module):
         x = self.bn2(x)
 
         if self.downsample is not None:
-            identity = self.downsample(x)
+            identity = self.downsample(identity)
 
         x += identity
         return x
@@ -183,6 +197,7 @@ class PNNColumn(nn.Module):
         layers_type="conv",
         kernel_size=3,
         padding=1,
+        stride=1,
         adapter="mlp",
     ):
         """
@@ -198,20 +213,23 @@ class PNNColumn(nn.Module):
         self.num_prev_modules = num_prev_modules
 
         if layers_type == 'conv':
-            self.itoh = nn.Conv2d(in_features, out_features_per_column, kernel_size=kernel_size, padding=padding)
+            self.itoh = nn.Sequential(
+                nn.Conv2d(in_features, out_features_per_column, kernel_size=kernel_size, stride=stride, padding=padding),
+                nn.InstanceNorm2d(out_features_per_column),
+            )
         elif layers_type == 'res_block':
-            self.itoh = ResBlock(in_features, out_features_per_column)
+            self.itoh = ResBlock(in_features, out_features_per_column, kernel_size=kernel_size, padding=padding, stride=stride)
         else:
             self.itoh = nn.Linear(in_features, out_features_per_column)
 
         if layers_type in ('conv', 'res_block'):
-            self.adapter = ConvAdapter(in_features, out_features_per_column, num_prev_modules)
+            self.adapter = ConvAdapter(in_features, out_features_per_column, num_prev_modules, kernel_size=kernel_size, stride=stride, padding=padding, layers_type=layers_type)
         elif adapter == "linear":
             self.adapter = LinearAdapter(in_features, out_features_per_column, num_prev_modules)
         elif adapter == "mlp":
             self.adapter = MLPAdapter(in_features, out_features_per_column, num_prev_modules)
         else:
-            raise ValueError("`adapter` must be one of: {'mlp', `linear', 'conv'}.")
+            raise ValueError("`adapter` must be one of: {'mlp', 'linear', 'conv'}.")
 
     def freeze(self):
         for param in self.parameters():
@@ -233,7 +251,7 @@ class PNNLayer(MultiTaskModule):
     within the same experience will result in a runtime error.
     """
 
-    def __init__(self, in_features, out_features_per_column, adapter="mlp", layers_type="res_block", kernel_size=3, padding=1):
+    def __init__(self, in_features, out_features_per_column, adapter="mlp", layers_type="res_block", kernel_size=3, padding=1, stride=1):
         """
         :param in_features: size of each input sample
         :param out_features_per_column:
@@ -243,12 +261,15 @@ class PNNLayer(MultiTaskModule):
         super().__init__()
         self.in_features = in_features
         self.out_features_per_column = out_features_per_column
-        self.layers_type = layers_type
         self.adapter = adapter
+        self.layers_type = layers_type
+        self.kernel_size = kernel_size
+        self.padding = padding
+        self.stride = stride
 
         # convert from task label to module list order
         self.task_to_module_idx = {}
-        first_col = PNNColumn(in_features, out_features_per_column, 0, adapter=adapter, layers_type=layers_type, kernel_size=kernel_size, padding=padding)
+        first_col = PNNColumn(in_features, out_features_per_column, 0, adapter=adapter, layers_type=self.layers_type, kernel_size=kernel_size, padding=padding, stride=stride)
         self.columns = nn.ModuleList([first_col])
 
     @property
@@ -270,10 +291,7 @@ class PNNLayer(MultiTaskModule):
             task_labels = [task_labels[0]]
         else:
             task_labels = set(task_labels)
-        assert len(task_labels) == 1, (
-            "PNN assumes a single task for each experience. Please use a "
-            "compatible benchmark."
-        )
+        assert len(task_labels) == 1, "PNN assumes a single task for each experience. Please use a compatible benchmark."
         # extract task label from set
         task_label = next(iter(task_labels))
         if task_label in self.task_to_module_idx:
@@ -300,6 +318,9 @@ class PNNLayer(MultiTaskModule):
                 self.num_columns,
                 adapter=self.adapter,
                 layers_type=self.layers_type,
+                kernel_size=self.kernel_size,
+                padding=self.padding,
+                stride=self.stride,
             )
         )
 
@@ -333,7 +354,7 @@ class PNN(MultiTaskModule):
         num_layers=1,
         in_features=784,
         hidden_features_per_column=100,
-        layers_type="res_block",
+        layers_type="conv",
         classifier_in_size=None,
         adapter="mlp",
     ):
@@ -353,13 +374,14 @@ class PNN(MultiTaskModule):
 
         self.layers = nn.ModuleList()
         first_layer_type = 'conv' if layers_type == 'res_block' else layers_type
-        self.layers.append(PNNLayer(in_features, hidden_features_per_column, layers_type=first_layer_type, kernel_size=7, padding=3))
+        self.layers.append(PNNLayer(in_features, hidden_features_per_column, layers_type=first_layer_type, kernel_size=7, padding=3, stride=2))
         for _ in range(num_layers - 1):
             layer = PNNLayer(
                 hidden_features_per_column,
                 hidden_features_per_column,
                 layers_type=layers_type,
                 adapter=adapter,
+                stride=2,
             )
             self.layers.append(layer)
         self.flatten = nn.Flatten()

@@ -354,7 +354,7 @@ class PNN(MultiTaskModule):
         num_layers=1,
         in_features=784,
         hidden_features_per_column=100,
-        layers_type="conv",
+        layers_type="res_block",
         classifier_in_size=None,
         adapter="mlp",
     ):

@@ -367,7 +367,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         model = resnet.resnet18_multihead(num_classes=classes_per_task[0], input_channels=input_channels, pretrained=args.pretrained)
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         criterion = nn.CrossEntropyLoss()
-        strategy = ReplayModified(model, optimizer, criterion, mem_size=500*args.n_experiences,
+        strategy = ReplayModified(model, optimizer, criterion, mem_size=250*args.n_experiences,
                                   train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
                                   train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
     elif args.method == 'lwf':

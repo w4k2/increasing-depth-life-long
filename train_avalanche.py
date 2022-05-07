@@ -182,7 +182,7 @@ def get_data(dataset_name, n_experiences, seed, image_size, train_aug, test_aug)
         classes_per_task = [10, 10, 10]
     elif dataset_name == '5-datasets':
         benchmark = get_multidataset_benchmark(('svhn', 'cifar', 'mnist', 'fmnist', 'notmnist'), image_size, train_aug, test_aug, seed)
-        classes_per_task = [10, 10, 10]
+        classes_per_task = [10, 10, 10, 10, 10]
     elif dataset_name == 'cores50':
         norm_stats = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
         train_transforms, eval_transforms = get_transforms(norm_stats, image_size, train_aug, test_aug)

@@ -14,9 +14,9 @@ class MutliDataset:
 
     def __getitem__(self, index):
         dataset_index, sample_index = index
-        sample =  self.datasets[dataset_index][sample_index]
+        sample = self.datasets[dataset_index][sample_index]
         return sample
-    
+
     def __len__(self):
         return self.len
 
@@ -25,7 +25,8 @@ class RehersalSampler():
     def __init__(self, dataset_sizes, dataset_samplers, batch_size, drop_last, oversample_small_tasks=False):
         self.dataset_sizes = dataset_sizes
         self.dataset_active = [True for _ in dataset_sizes]
-        self.dataset_samplers = [iter(sampler) for sampler in dataset_samplers]
+        self.dataset_samplers = dataset_samplers
+        self.dataset_samplers_iter = [iter(sampler) for sampler in dataset_samplers]
         self.batch_size = batch_size
         self.drop_last = drop_last
         self.oversample_small_tasks = oversample_small_tasks
@@ -34,9 +35,12 @@ class RehersalSampler():
         if self.drop_last:
             self.len = sum(self.dataset_sizes) // self.batch_size
         else:
-            self.len = (sum(self.dataset_sizes) + self.batch_size - 1) // self.batch_size 
-        
+            self.len = (sum(self.dataset_sizes) + self.batch_size - 1) // self.batch_size
+
     def __iter__(self):
+        self.dataset_active = [True for _ in self.dataset_sizes]
+        self.dataset_samplers_iter = [iter(sampler) for sampler in self.dataset_samplers]
+
         batch = []
         num_generated = 0
         i = -1
@@ -48,11 +52,11 @@ class RehersalSampler():
             if not self.dataset_active[i]:
                 continue
             try:
-                j = next(self.dataset_samplers[i])
+                j = next(self.dataset_samplers_iter[i])
             except StopIteration:
                 if self.oversample_small_tasks:
-                    self.dataset_samplers[i] = iter(self.dataset_samplers[i])
-                    j = next(self.dataset_samplers[i])
+                    self.dataset_samplers_iter[i] = iter(self.dataset_samplers[i])
+                    j = next(self.dataset_samplers_iter[i])
                 else:
                     self.dataset_active[i] = False
                     continue
@@ -61,12 +65,13 @@ class RehersalSampler():
             if len(batch) == self.batch_size:
                 yield batch
                 num_generated += 1
-                batch = [] 
+                batch = []
         if len(batch) > 0 and not self.drop_last:
             yield batch
 
     def __len__(self) -> int:
         return self.len
+
 
 class ReplayPluginModified(StrategyPlugin):
     """
@@ -111,10 +116,10 @@ class ReplayPluginModified(StrategyPlugin):
         concat_dataset = MutliDataset(dataset_list)
 
         sampler = RehersalSampler(dataset_sizes=[len(dataset) for dataset in dataset_list],
-                    dataset_samplers=[RandomSampler(dataset) for dataset in dataset_list],
-                    batch_size=strategy.train_mb_size,
-                    drop_last=False)
-        
+                                  dataset_samplers=[RandomSampler(dataset) for dataset in dataset_list],
+                                  batch_size=strategy.train_mb_size,
+                                  drop_last=False)
+
         def collate(mbatches):
             batch = []
             for i in range(len(mbatches[0])):
@@ -152,6 +157,7 @@ class ReplayPluginModified(StrategyPlugin):
         else:
             subset = torch.utils.data.Subset(dataset, indices)
         return subset
+
 
 class ReplayModified(BaseStrategy):
     """ Experience replay strategy.

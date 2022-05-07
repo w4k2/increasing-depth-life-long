@@ -10,7 +10,7 @@ import models.resnet as resnet
 import models.reduced_resnet as reduced_resnet
 import distutils.util
 
-from avalanche.benchmarks.datasets import MNIST, FashionMNIST, CIFAR10
+from avalanche.benchmarks.datasets import MNIST, FashionMNIST, CIFAR10, SVHN
 from avalanche.benchmarks.generators import dataset_benchmark
 from avalanche.benchmarks.classic import PermutedMNIST, SplitCIFAR100, SplitMNIST, SplitCIFAR10, SplitTinyImageNet, CORe50
 from avalanche.evaluation.metrics.confusion_matrix import StreamConfusionMatrix
@@ -21,6 +21,7 @@ from avalanche.training.plugins import EvaluationPlugin
 from avalanche.evaluation.metrics import accuracy_metrics, loss_metrics, forgetting_metrics
 
 from avalanche.logging import InteractiveLogger, TextLogger
+from utils.notmnist import NOTMNIST
 from utils.custom_plugins import *
 from utils.custom_replay import *
 from utils.custom_cumulative import *
@@ -93,7 +94,7 @@ def parse_args():
     parser.add_argument('--base_model', default='resnet18', choices=('resnet9', 'resnet18', 'reduced_resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
     parser.add_argument('--pretrained', default=True, type=distutils.util.strtobool, help='if True load weights pretrained on imagenet')
     parser.add_argument('--dataset', default='permutation-mnist', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist', 'tiny-imagenet',
-                        'cifar10-mnist-fashion-mnist', 'mnist-fashion-mnist-cifar10', 'fashion-mnist-cifar10-mnist', 'cores50'))
+                        'cifar10-mnist-fashion-mnist', 'mnist-fashion-mnist-cifar10', 'fashion-mnist-cifar10-mnist', '5-datasets', 'cores50'))
     parser.add_argument('--n_experiences', default=50, type=int)
     parser.add_argument('--train_on_experiences', default=50, type=int)
     parser.add_argument('--forgetting_stopping_threshold', default=0.5, type=float)
@@ -171,13 +172,16 @@ def get_data(dataset_name, n_experiences, seed, image_size, train_aug, test_aug)
                                       )
         classes_per_task = benchmark.n_classes_per_exp
     elif dataset_name == 'cifar10-mnist-fashion-mnist':
-        benchmark = get_multidataset_benchmark(('cifar', 'mnist', 'fmnist'), image_size)
+        benchmark = get_multidataset_benchmark(('cifar', 'mnist', 'fmnist'), image_size, train_aug, test_aug, seed)
         classes_per_task = [10, 10, 10]
     elif dataset_name == 'mnist-fashion-mnist-cifar10':
-        benchmark = get_multidataset_benchmark(('mnist', 'fmnist', 'cifar'), image_size)
+        benchmark = get_multidataset_benchmark(('mnist', 'fmnist', 'cifar'), image_size, train_aug, test_aug, seed)
         classes_per_task = [10, 10, 10]
     elif dataset_name == 'fashion-mnist-cifar10-mnist':
-        benchmark = get_multidataset_benchmark(('fmnist', 'cifar', 'mnist'), image_size)
+        benchmark = get_multidataset_benchmark(('fmnist', 'cifar', 'mnist'), image_size, train_aug, test_aug, seed)
+        classes_per_task = [10, 10, 10]
+    elif dataset_name == '5-datasets':
+        benchmark = get_multidataset_benchmark(('svhn', 'cifar', 'mnist', 'fmnist', 'notmnist'), image_size, train_aug, test_aug, seed)
         classes_per_task = [10, 10, 10]
     elif dataset_name == 'cores50':
         norm_stats = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
@@ -210,14 +214,16 @@ def get_data(dataset_name, n_experiences, seed, image_size, train_aug, test_aug)
     return train_stream, test_stream, classes_per_task
 
 
-def get_multidataset_benchmark(order, image_size):
+def get_multidataset_benchmark(order, image_size, train_aug, test_aug, seed):
     cifar10_norm_stats = (0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)
     mnist_norm_stats = (0.1307,), (0.3081,)
     fmnist_norm_stats = (0.2860,), (0.3530,)
 
-    cifar10_train_transforms, cifar10_eval_transforms = get_transforms(cifar10_norm_stats, image_size)
+    cifar10_train_transforms, cifar10_eval_transforms = get_transforms(cifar10_norm_stats, image_size, train_aug, test_aug)
     mnist_train_transforms, mnist_eval_transforms = get_mnist_transforms(mnist_norm_stats, image_size)
     fmnist_train_transforms, fmnist_eval_transforms = get_mnist_transforms(fmnist_norm_stats, image_size)
+    svhn_train_transforms, svhn_eval_transforms = get_mnist_transforms(mnist_norm_stats, image_size, stack_channels=False)
+    notmnist_train_transforms, notmnist_eval_transforms = get_mnist_transforms(mnist_norm_stats, image_size)
 
     train_datasets = []
     test_datasets = []
@@ -232,6 +238,16 @@ def get_multidataset_benchmark(order, image_size):
         elif dataset_name == 'fmnist':
             train_datasets.append(FashionMNIST('./data/datasets', train=True, transform=fmnist_train_transforms, download=True))
             test_datasets.append(FashionMNIST('./data/datasets', train=False, transform=fmnist_eval_transforms, download=True))
+        elif dataset_name == 'svhn':
+            train_svhn = SVHN('./data/datasets', split='train', transform=svhn_train_transforms, download=True)
+            train_svhn.targets = train_svhn.labels
+            train_datasets.append(train_svhn)
+            test_svhn = SVHN('./data/datasets', split='test', transform=svhn_eval_transforms, download=True)
+            test_svhn.targets = test_svhn.labels
+            test_datasets.append(test_svhn)
+        elif dataset_name == 'notmnist':
+            train_datasets.append(NOTMNIST('./data/datasets', train=True, transforms=notmnist_train_transforms, seed=seed))
+            test_datasets.append(NOTMNIST('./data/datasets', train=False, transforms=notmnist_eval_transforms, seed=seed))
         else:
             raise ValueError("Invalid dataset name")
 
@@ -250,13 +266,14 @@ def parse_augmentations(augmentations_str, image_size, norm_stats):
     return Compose(aug)
 
 
-def get_mnist_transforms(norm_stats, image_size):
+def get_mnist_transforms(norm_stats, image_size, stack_channels=True):
     transform_list = [
         Resize((image_size, image_size)),
         ToTensor(),
-        Normalize(*norm_stats),
-        Lambda(lambda x: torch.cat([x, x, x], dim=0))
+        Normalize(*norm_stats)
     ]
+    if stack_channels:
+        transform_list.append(Lambda(lambda x: torch.cat([x, x, x], dim=0)))
     train_transforms = Compose(transform_list)
     eval_transforms = Compose(transform_list)
     return train_transforms, eval_transforms
@@ -350,7 +367,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         model = resnet.resnet18_multihead(num_classes=classes_per_task[0], input_channels=input_channels, pretrained=args.pretrained)
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         criterion = nn.CrossEntropyLoss()
-        strategy = ReplayModified(model, optimizer, criterion, mem_size=250*args.n_experiences,
+        strategy = ReplayModified(model, optimizer, criterion, mem_size=500*args.n_experiences,
                                   train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
                                   train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
     elif args.method == 'lwf':

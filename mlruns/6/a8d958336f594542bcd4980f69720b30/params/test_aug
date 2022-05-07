@@ -1,1 +1,0 @@
-Resize((image_size, image_size)),ToTensor(),Normalize(*norm_stats)

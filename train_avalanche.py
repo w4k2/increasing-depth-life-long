@@ -22,12 +22,12 @@ from avalanche.evaluation.metrics import accuracy_metrics, loss_metrics, forgett
 
 from avalanche.logging import InteractiveLogger, TextLogger
 from utils.notmnist import NOTMNIST
-from utils.custom_plugins import *
-from utils.custom_replay import *
-from utils.custom_cumulative import *
-from utils.custom_agem import *
-from utils.custom_pnn import *
-from utils.mir import *
+from methods.custom_plugins import *
+from methods.custom_replay import *
+from methods.custom_cumulative import *
+from methods.custom_agem import *
+from methods.custom_pnn import *
+from methods.mir import *
 from torchvision.transforms import *
 
 import cProfile

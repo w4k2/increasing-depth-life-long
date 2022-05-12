@@ -5,7 +5,7 @@ import numpy as np
 
 
 def main():
-    runs_wo_pretraining = {  # columns: name, #parameters, pmnist acc, pmnist FM, cifar100 acc, cifar100 FM, TIN acc, TIN FM x2 (w/o w/ pretraining)
+    runs_wo_pretraining = {  # columns: name, #parameters, cifar100 acc, cifar100 FM, TIN acc, TIN FM, pmnist acc, pmnist FM
         'Upperbound': [
             [None, None, None, None, None],
             [None, None, None, None, None],
@@ -42,7 +42,7 @@ def main():
             [None, None, None, None, None],
         ],
     }
-    runs_w_pretraining = {  # columns: name, #parameters, pmnist acc, pmnist FM, cifar100 acc, cifar100 FM, TIN acc, TIN FM x2 (w/o w/ pretraining)
+    runs_w_pretraining = {  # columns: name, #parameters, cifar100 acc, cifar100 FM, TIN acc, TIN FM, pmnist acc, pmnist FM
         'Upperbound': [
             [None, None, None, None, None],
             [None, None, None, None, None],
@@ -56,7 +56,7 @@ def main():
         r'ER \cite{DBLP:journals/corr/abs-1902-10486}': [
             ['7299961ddfc94f7b835c5cbaea7436d9', '6685595dc6074ed48e92ab490ce0a039', '21f469599c4e42218022ae185cb53c3e', 'b6ff39f4c6ee423ba74df902fa2c5271', 'd11dd8a241084bce97511322b7d0a741'],
             ['2f5bc0afbce04d5a8bea033d6a8ef1ba', '7985cab2d91545e0893d705da7be50e5', 'a2d2b5e72ebd4dcbbc9f2cda2f9e81d5', 'd7d92cefe8864d488ee75a543f110d86', '8a0f6b6d07fb4087a5a20b2367fec0d4'],
-            [None, None, None, None, None],
+            ['10ad8ed78bbd4f6caae4a965781cebfe', '4cbe7225f3c44e74b4421c35ef3edcfc', '7c65a8c068fa4363933ea0a4367c7b90', '51c599f266b44355ba3a9aab6b323c5d', 'fbe4e507f6c24be4942b564b2c3abb83'],
         ],
         r'A-GEM \cite{DBLP:journals/corr/abs-1812-00420}': [
             [None, None, None, None, None],

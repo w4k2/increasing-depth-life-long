@@ -1,55 +1,114 @@
 import pathlib
 import mlflow
 import tabulate
+import numpy as np
 
 
 def main():
-    method_runs = {
-        'upper': ['b16331fd04b740bebd6a72767e3a3e8e', 'd1dc183492d5425792f14d17d3a0e615', '9a14602c9e874c5689432cacb5675672'],
-        'ewc': ['1e53d7c3ca474547811750dc897c0a2e', 'd5b8a1caf38740e6bcd01fb07fcd31c5', 'b5f13d6463724ee1832b311f1099c778'],
-        'replay': ['3002fc6aa16849788ffd7d5683357403', '5767d9cacf734542bcb97c8dc8dffde1', '17c46a8ff7cf4b0293bc79ed439397dc'],
-        'a-gem': ['20ef4f666176469fb97a577563bf03f2', 'fe17f4ae261d42b6ae37968bb02345fd', '6ceb7e96538b4909ba6dc47cbadffc0b'],
-        'pnn': ['4d145418eb9d4c6eaf0a305fbe09c479', 'b384bcde400643a8a6505ffd9e41a116', 'c3eb215292354435a4dc1a7264f279dc'],
-        'lwf': ['8fc98af384714e3ba611e44491aff9ab', '1210e3abce85484b908a465efcf69904', 'ae53629655ac4c718ada5913fefda5ec'],
-        'ours': ['20bb9712c0f64ea588e65906634b4297', '049b9d24be3c4df2b43e0a8b7aeb161b', '3ac414dcab554ab3a882640ac3ad4df7'],
+    runs_wo_pretraining = {  # columns: name, #parameters, pmnist acc, pmnist FM, cifar100 acc, cifar100 FM, TIN acc, TIN FM x2 (w/o w/ pretraining)
+        'Upperbound': [
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+        ],
+        r'EWC \cite{DBLP:journals/corr/KirkpatrickPRVD16}': [
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+        ],
+        r'ER \cite{DBLP:journals/corr/abs-1902-10486}': [
+            ['46aae2323aea487aa37e28dde368d2b0', 'eeabf8f4d9614edd8123ffb1751dfd63', '8bf82c9490ef48fe94c9b2577b42b0f6', '40a3970e1ec644bb90ed7a2de4df4353', 'cff2bf5764984fdb9ecfe2adcfc1b945'],
+            ['24feac44583844499e9f4908835c80d5', '6c7b8a96cea3433db1dfedeaf05a859a', '739859dcecf14a2fb0790357e20e242d', '65f074de0f1a4031850c0009ef000559', 'b5d020a2ed524fec93abfc02839b2443'],
+            ['9fcd5b53d7c14a98a729bd8ed69039dd', 'bc2551f188d14550b2abf7bf02555eb3', '01f10d41a97647e7af6d12d42f5e3d51', '1be6fa11d69641cebba4eb754a8cc4c4', 'a02e9f40606d4ab0b707ac6ffce41aa1'],
+        ],
+        r'A-GEM \cite{DBLP:journals/corr/abs-1812-00420}': [
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+        ],
+        r'PNN \cite{DBLP:journals/corr/RusuRDSKKPH16}': [
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+        ],
+        r'LWF \cite{DBLP:journals/corr/LiH16e}': [
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+        ],
+        'Ours': [
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+        ],
     }
+    runs_w_pretraining = {  # columns: name, #parameters, pmnist acc, pmnist FM, cifar100 acc, cifar100 FM, TIN acc, TIN FM x2 (w/o w/ pretraining)
+        'Upperbound': [
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+        ],
+        r'EWC \cite{DBLP:journals/corr/KirkpatrickPRVD16}': [
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+        ],
+        r'ER \cite{DBLP:journals/corr/abs-1902-10486}': [
+            ['7299961ddfc94f7b835c5cbaea7436d9', '6685595dc6074ed48e92ab490ce0a039', '21f469599c4e42218022ae185cb53c3e', 'b6ff39f4c6ee423ba74df902fa2c5271', 'd11dd8a241084bce97511322b7d0a741'],
+            ['2f5bc0afbce04d5a8bea033d6a8ef1ba', '7985cab2d91545e0893d705da7be50e5', 'a2d2b5e72ebd4dcbbc9f2cda2f9e81d5', 'd7d92cefe8864d488ee75a543f110d86', '8a0f6b6d07fb4087a5a20b2367fec0d4'],
+            [None, None, None, None, None],
+        ],
+        r'A-GEM \cite{DBLP:journals/corr/abs-1812-00420}': [
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+        ],
+        r'PNN \cite{DBLP:journals/corr/RusuRDSKKPH16}': [
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+        ],
+        r'LWF \cite{DBLP:journals/corr/LiH16e}': [
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+        ],
+        'Ours': [
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+            [None, None, None, None, None],
+        ],
+    }
+    num_parameters = [0, 0, 0, 0, 0, 0, 0]
 
     # client = mlflow.tracking.MlflowClient('///home/pwr/Documents/stochastic-depth-v2/stochastic-depth-data-streams/mlruns/')
     client = mlflow.tracking.MlflowClient('///home/jkozal/Documents/PWr/stochastic_depth/mlruns/')
 
     table = []
-    for name, (pmnist_run_id, cifar100_run_id, tiny_imagenet_run_id) in method_runs.items():
-        row = list()
-        row.append(name)
+    for num_param, (name, run_ids) in zip(num_parameters, runs_wo_pretraining.items()):
+        row = get_row(client, num_param, name, run_ids)
+        table.append(row)
 
-        acc = get_metrics(pmnist_run_id, client)
-        row.append(acc)
-        fm = calc_forgetting_measure(pmnist_run_id, client, experiment_id=2)
-        row.append(fm)
+    table.append(['\\hline'])
 
-        acc = get_metrics(cifar100_run_id, client)
-        row.append(acc)
-        fm = calc_forgetting_measure(cifar100_run_id, client, experiment_id=4)
-        row.append(fm)
-
-        acc = get_metrics(tiny_imagenet_run_id, client)
-        row.append(acc)
-        fm = calc_forgetting_measure(tiny_imagenet_run_id, client, experiment_id=1)
-        row.append(fm)
-
+    for num_param, (name, run_ids) in zip(num_parameters, runs_w_pretraining.items()):
+        row = get_row(client, num_param, name, run_ids)
         table.append(row)
 
     tab = tabulate.tabulate(table)
     print(tab)
     print("\n\n")
 
-    tab_latex = tabulate.tabulate(table, tablefmt="latex", headers=['method', 'acc', 'FM', 'acc', 'FM', 'acc', 'FM'])
+    tab_latex = tabulate.tabulate(table, tablefmt="latex", headers=['method', '#parameters', 'acc', 'FM', 'acc', 'FM', 'acc', 'FM', 'acc', 'FM', 'acc', 'FM', 'acc', 'FM'])
+    tab_latex = tab_latex.replace('\\textbackslash{}', '\\')
+    tab_latex = tab_latex.replace('\\{', '{')
+    tab_latex = tab_latex.replace('\\}', '}')
     print(tab_latex)
     print("\n\n")
 
     mixed_runs = {
-        'replay': ['2313d5258b19453795bf066d6a313f36', 'bf4bc0010c804ae9a3102f6e6ef37bb8', '582d7f22beb6464f94fc5f57c00f3ccf'],
-        'ours': ['ac326b1f79ad41da828ec787501ad8f1', 'c48e8c47fa314168853bc386d2dfd2bf', '06b0c6e712f84bb991cb328a97215f7c'],
+        'ER': ['b47c4e4040d84cf8986033542c74a256', '682c1cc4d0a8465a9dd54a1528186a4a'],
+        'Ours': ['5833f8eb7c634bb6a8551fb1aa6d8fb7', '0f05d33f6360481eb317de1aadf8c480'],
     }
 
     table = []
@@ -68,16 +127,49 @@ def main():
     print(tab)
     print("\n\n")
 
-    tab_latex = tabulate.tabulate(table, tablefmt="latex", headers=['method', 'acc', 'FM', 'acc', 'FM', 'acc', 'FM'])
+    tab_latex = tabulate.tabulate(table, tablefmt="latex", headers=['method', 'acc', 'FM', 'acc', 'FM'])
     print(tab_latex)
     print("\n\n")
+
+
+def get_row(client, num_param, name, run_ids):
+    row = list()
+    row.append(name)
+    row.append(num_param)
+
+    for dataset_run_ids, experiment_id in zip(run_ids, (4, 1, 2)):
+        avrg_acc, acc_std, avrg_fm, fm_std = calc_average_metrics(dataset_run_ids, client, experiment_id)
+        row.append(f'{avrg_acc}±{acc_std}')
+        row.append(f'{avrg_fm}±{fm_std}')
+    return row
+
+
+def calc_average_metrics(dataset_run_ids, client, experiment_id):
+    if dataset_run_ids[0] == None:
+        return '-', '-', '-', '-'
+
+    acc_all = []
+    fm_all = []
+    for run_id in dataset_run_ids:
+        acc = get_metrics(run_id, client)
+        acc_all.append(acc)
+        fm = calc_forgetting_measure(run_id, client, experiment_id=experiment_id)
+        fm_all.append(fm)
+    avrg_acc = sum(acc_all) / len(acc_all)
+    avrg_acc = round(avrg_acc, 4)
+    acc_std = np.array(acc_all).std()
+    acc_std = round(acc_std, 4)
+    avrg_fm = sum(fm_all) / len(fm_all)
+    avrg_fm = round(avrg_fm, 4)
+    fm_std = np.array(fm_all).std()
+    fm_std = round(fm_std, 4)
+    return avrg_acc, acc_std, avrg_fm, fm_std
 
 
 def get_metrics(run_id, client):
     run = client.get_run(run_id)
     run_metrics = run.data.metrics
     acc = run_metrics['avrg_test_acc']
-    acc = round(acc, 4)
     return acc
 
 
@@ -102,7 +194,6 @@ def calc_forgetting_measure(run_id, client, experiment_id, num_tasks=None):
         fm += abs(task_accs[-1] - max(task_accs))
 
     fm = fm / num_tasks
-    fm = round(fm, 4)
     return fm
 
 

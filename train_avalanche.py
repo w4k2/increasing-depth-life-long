@@ -17,7 +17,7 @@ from avalanche.evaluation.metrics.confusion_matrix import StreamConfusionMatrix
 from avalanche.training.strategies import BaseStrategy, EWC, GEM, Replay, SynapticIntelligence, Cumulative, LwF
 from avalanche.models import SimpleMLP
 from utils.mlflow_logger import MLFlowLogger
-from avalanche.training.plugins import EvaluationPlugin
+from avalanche.training.plugins import EvaluationPlugin, LRSchedulerPlugin
 from avalanche.evaluation.metrics import accuracy_metrics, loss_metrics, forgetting_metrics
 
 from avalanche.logging import InteractiveLogger, TextLogger
@@ -28,6 +28,9 @@ from methods.custom_cumulative import *
 from methods.custom_agem import *
 from methods.custom_pnn import *
 from methods.mir import *
+from methods.hat import *
+from methods.hat_model import *
+
 from torchvision.transforms import *
 
 import cProfile
@@ -90,7 +93,7 @@ def parse_args():
     parser.add_argument('--debug', action='store_true', help='if true, execute only one iteration in training epoch')
     parser.add_argument('--interactive_logger', default=True, type=distutils.util.strtobool, help='if True use interactive logger with tqdm for printing in console')
 
-    parser.add_argument('--method', default='agem', choices=('baseline', 'cumulative', 'll-stochastic-depth', 'ewc', 'si', 'gem', 'agem', 'pnn', 'replay', 'lwf', 'mir'))
+    parser.add_argument('--method', default='agem', choices=('baseline', 'cumulative', 'll-stochastic-depth', 'ewc', 'si', 'gem', 'agem', 'pnn', 'replay', 'lwf', 'mir', 'hat'))
     parser.add_argument('--base_model', default='resnet18', choices=('resnet9', 'resnet18', 'reduced_resnet18', 'resnet50', 'resnet18-stoch', 'resnet50-stoch', 'vgg', 'simpleMLP'))
     parser.add_argument('--pretrained', default=True, type=distutils.util.strtobool, help='if True load weights pretrained on imagenet')
     parser.add_argument('--dataset', default='permutation-mnist', choices=('cifar100', 'cifar10', 'mnist', 'permutation-mnist', 'tiny-imagenet',
@@ -384,6 +387,14 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         strategy = Mir(model, optimizer, criterion, patterns_per_exp=250, sample_size=50,
                        train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
                        train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
+    elif args.method == 'hat':
+        model = HATModel(classes_per_task, args.image_size, wide=10)
+        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0, weight_decay=0)
+        lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.8)
+        plugins.append(LRSchedulerPlugin(lr_scheduler))
+        strategy = HATStrategy(model, optimizer,
+                               train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
+                               train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
 
     return strategy, mlf_logger
 

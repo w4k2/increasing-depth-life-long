@@ -9,16 +9,17 @@ from avalanche.training.plugins import StrategyPlugin
 from avalanche.training.plugins.evaluation import default_logger
 from typing import Optional, Sequence, Union, List
 
-from methods.hat_model import HATModel
+# from methods.cat_model import CATModel
+from methods.cat_model_mlp import CATModel
 
 
 class CATStrategy(BaseStrategy):
-    def __init__(self, num_classes, model, optimizer,
+    def __init__(self, model, optimizer, num_tasks,
                  lamb=0.75, smax=400, clipgrad=10000,
                  train_mb_size: int = 1, train_epochs: int = 1,
                  eval_mb_size: int = None, device=None,
                  plugins=None, evaluator=default_logger, eval_every=-1):
-        assert isinstance(model, HATModel)
+        assert isinstance(model, CATModel)
         super().__init__(
             model, optimizer, None,
             train_mb_size=train_mb_size, train_epochs=train_epochs,
@@ -37,8 +38,17 @@ class CATStrategy(BaseStrategy):
 
         self.check_federated = CheckFederated()
 
-        self.acc_transfer = np.zeros((num_classes, num_classes), dtype=np.float32)
-        self.similarity_transfer = np.zeros((num_classes, num_classes), dtype=np.float32)
+        self.acc_transfer = np.zeros((num_tasks, num_tasks), dtype=np.float32)
+        self.similarity_transfer = np.zeros((num_tasks, num_tasks), dtype=np.float32)
+        self.similarities = []
+        self.history_mask_back = []
+        self.history_mask_pre = []
+
+    def transfer_criterion(self, outputs, targets, mask=None):
+        return F.cross_entropy(outputs, targets)
+
+    def joint_criterion(self, outputs, targets, masks, outputs_attn, model_weights=1):
+        return self.criterion(outputs, targets, masks) + model_weights * F.cross_entropy(outputs_attn, targets)
 
     def criterion(self, outputs, targets, masks):
         reg = 0
@@ -55,7 +65,7 @@ class CATStrategy(BaseStrategy):
                 count += np.prod(m.size()).item()
         reg /= count
 
-        return self.ce(outputs, targets)+self.lamb*reg
+        return F.cross_entropy(outputs, targets) + self.lamb * reg
 
     def train(self, experiences, eval_streams=None, **kwargs):
         """ Training loop. if experiences is a single element trains on it.
@@ -87,34 +97,30 @@ class CATStrategy(BaseStrategy):
 
         self._periodic_eval(eval_streams, do_final=False, do_initial=True)
 
-        task = self.experience.current_experience
-        similarities = []
-        history_mask_back = []
-        history_mask_pre = []
-
         for self.experience in experiences:
             candidate_phases = ['mcl']
+            task = self.experience.current_experience
 
             for candidate_phase in candidate_phases:
                 if candidate_phase == 'mcl':
                     similarity = self.auto_similarity(task)
-                    self.check_federated.set_similarities(similarities)
-                similarities.append(similarity)
-                self.check_federated.set_similarities(similarities)
+                    self.check_federated.set_similarities(self.similarities)
+                self.similarities.append(similarity)
+                self.check_federated.set_similarities(self.similarities)
 
                 self.train_exp(self.experience, eval_streams, candidate_phase,
-                               similarity=similarity, history_mask_back=history_mask_back,
-                               history_mask_pre=history_mask_pre, check_federated=self.check_federated, **kwargs)
+                               similarity=similarity, history_mask_back=self.history_mask_back,
+                               history_mask_pre=self.history_mask_pre, check_federated=self.check_federated, **kwargs)
 
                 if candidate_phase == 'mcl':
-                    history_mask_back.append(dict((k, v.data.clone()) for k, v in self.mask_back.items()))
-                    history_mask_pre.append([m.data.clone() for m in self.mask_pre])
+                    self.history_mask_back.append(dict((k, v.data.clone()) for k, v in self.mask_back.items()))
+                    self.history_mask_pre.append([m.data.clone() for m in self.mask_pre])
         self._after_training(**kwargs)
 
         res = self.evaluator.get_last_metrics()
         return res
 
-    def auto_similarity(self, t, experiences):
+    def auto_similarity(self, t):
         """use this to detect similarity by transfer and reference network"""
         if t > 0:
             for pre_task in range(t+1):
@@ -127,9 +133,9 @@ class CATStrategy(BaseStrategy):
                 pre_mask = [gfc1, gfc2]
 
                 if pre_task == t:  # the last one
-                    self.train_exp(t, self.experience, phase='reference', pre_mask=pre_mask, pre_task=pre_task)  # implemented as random mask
+                    self.train_exp(self.experience, phase='reference', pre_mask=pre_mask, pre_task=pre_task)  # implemented as random mask
                 elif pre_task != t:
-                    self.train_exp(t, self.experience, phase='transfer', pre_mask=pre_mask, pre_task=pre_task)
+                    self.train_exp(self.experience, phase='transfer', pre_mask=pre_mask, pre_task=pre_task)
 
                 if pre_task == t:  # the last one
                     res = self.eval([self.experience], phase='reference',  # TODO change to val exprience
@@ -137,17 +143,20 @@ class CATStrategy(BaseStrategy):
                 elif pre_task != t:
                     res = self.eval([self.experience], phase='transfer',
                                     pre_mask=pre_mask, pre_task=pre_task)
-                print(res)
-                test_acc = res['acc']  # TODO check if works
-                exit()
+                accuracy_keys = [key for key in res if 'Top1_Acc_Exp/eval_phase' in key]
+                last_key = None
+                max_task_number = -1
+                for key in accuracy_keys:
+                    task_number = int(key[-3:])
+                    if task_number > max_task_number:
+                        last_key = key
+                test_acc = res[last_key]
 
                 self.acc_transfer[t, pre_task] = test_acc
 
         similarity = [0]
         if t > 0:
             acc_list = self.acc_transfer[t][:t]  # t from 0
-            print('acc_list: ', acc_list)
-
             similarity = [0 if (acc_list[acc_id] <= self.acc_transfer[t][t]) else 1 for acc_id in range(len(acc_list))]  # remove all acc < 0.5
 
             for source_task in range(len(similarity)):
@@ -239,11 +248,11 @@ class CATStrategy(BaseStrategy):
         lr = self.optimizer.defaults['lr']
         if phase == 'mcl':
             params = list(self.model.kt.parameters())+list(self.model.mcl.parameters())
-            self.optimizer = torch.optim.SGD(params, lr=lr)
+            self.optimizer = optim.SGD(params, lr=lr)
         elif phase == 'transfer':
-            self.optimizer = torch.optim.SGD(list(self.model.transfer.parameters()), lr=lr)
+            self.optimizer = optim.SGD(list(self.model.transfer.parameters()), lr=lr)
         elif phase == 'reference':
-            self.optimizer = torch.optim.SGD(list(self.model.transfer.parameters()), lr=lr)
+            self.optimizer = optim.SGD(list(self.model.transfer.parameters()), lr=lr)
         else:
             raise ValueError(f'Invalid pahse: {phase}')
 
@@ -268,28 +277,26 @@ class CATStrategy(BaseStrategy):
             # Forward
             self._before_forward(**kwargs)
 
-            self.mb_output = self.forward()
-
             t = self.experience.current_experience
             task = torch.LongTensor([t]).to(self.device)
             if phase == 'mcl':
                 outputs, masks, outputs_attn = self.model.forward(task, self.mb_x, s=s, phase=phase,
                                                                   similarity=similarity, history_mask_pre=history_mask_pre,
                                                                   check_federated=check_federated)
-                output = outputs[t]
+                self.mb_output = outputs[t]
 
                 if outputs_attn is None:
-                    loss = self.criterion(output, self.mb_y, masks)
+                    loss = self.criterion(self.mb_output, self.mb_y, masks)
                 else:
                     output_attn = outputs_attn[t]
-                    loss = self.joint_criterion(output, self.mb_y, masks, output_attn)
+                    loss = self.joint_criterion(self.mb_output, self.mb_y, masks, output_attn)
 
             elif phase == 'transfer' or phase == 'reference':
 
                 outputs = self.model.forward(task, self.mb_x, s=s, phase=phase,
                                              pre_mask=pre_mask, pre_task=pre_task)
-                output = outputs[t]
-                loss = self.transfer_criterion(output, self.mb_y)
+                self.mb_output = outputs[t]
+                loss = self.transfer_criterion(self.mb_output, self.mb_y)
 
             self._after_forward(**kwargs)
 
@@ -346,7 +353,7 @@ class CATStrategy(BaseStrategy):
                         p.data = torch.clamp(p.data, -thres_emb, thres_emb)
 
     @torch.no_grad()
-    def eval(self, exp_list, phase, pre_mask, pre_task, **kwargs):
+    def eval(self, exp_list, phase=None, pre_mask=None, pre_task=None, **kwargs):
         """
         Evaluate the current model on a series of experiences and
         returns the last recorded value for each metric.
@@ -403,13 +410,20 @@ class CATStrategy(BaseStrategy):
                                                                   check_federated=check_federated)
                 self.mb_output = outputs[t]
 
+                if outputs_attn is None:
+                    loss = self.criterion(self.mb_output, self.mb_y, masks)
+                else:
+                    output_attn = outputs_attn[t]
+                    loss = self.joint_criterion(self.mb_output, self.mb_y, masks, output_attn)
+
             elif phase == 'transfer' or phase == 'reference':
                 outputs = self.model.forward(task, self.mb_x, s=self.smax, phase=phase,
                                              pre_mask=pre_mask, pre_task=pre_task)
-                output = outputs[t]
+                self.mb_output = outputs[t]
+                loss = self.transfer_criterion(self.mb_output, self.mb_y)
 
             self._after_eval_forward(**kwargs)
-            self.loss = self.criterion()
+            self.loss = loss
 
             self._after_eval_iteration(**kwargs)
 

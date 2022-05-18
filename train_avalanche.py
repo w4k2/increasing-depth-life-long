@@ -31,7 +31,8 @@ from methods.mir import *
 from methods.hat import *
 from methods.hat_model import *
 from methods.cat import *
-from methods.cat_model import *
+# from methods.cat_model import *
+from methods.cat_model_mlp import *
 
 from torchvision.transforms import *
 
@@ -57,7 +58,7 @@ def run_experiment(args):
         eval_stream = [test_stream[i]]
         strategy.train(train_task, eval_stream, num_workers=20)
         selected_tasks = [test_stream[j] for j in range(0, i+1)]
-        eval_results = strategy.eval(selected_tasks)
+        eval_results = strategy.eval(selected_tasks, phase='mcl')
         results.append(eval_results)
         forgetting = get_forgetting(eval_results)
         if forgetting is not None and forgetting > args.forgetting_stopping_threshold:
@@ -402,7 +403,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0, weight_decay=0)  # TODO check and change weight decay and momentum
         lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.8)
         plugins.append(LRSchedulerPlugin(lr_scheduler))
-        strategy = HATStrategy(model, optimizer,
+        strategy = CATStrategy(model, optimizer, len(classes_per_task),
                                train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
                                train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
 

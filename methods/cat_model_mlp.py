@@ -1,26 +1,20 @@
-import sys
 import torch
-import math
-import torch.nn.functional as F
-import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
-import torch
-
-
-def compute_conv_output_size(Lin, kernel_size, stride=1, padding=0, dilation=1):
-    return int(np.floor((Lin+2*padding-dilation*(kernel_size-1)-1)/float(stride)+1))
+import numpy as np
 
 
 class CATModel(torch.nn.Module):
 
-    def __init__(self, classes_per_task, n_head, size, nhid=2000, pdrop1=0.2, pdrop2=0.5, smax=400):
+    def __init__(self, classes_per_task, n_head, size,
+                 nlayers=2, nhid=2000, pdrop1=0.2, pdrop2=0.5, smax=400):
         super().__init__()
 
         ncha = 3
         num_tasks = len(classes_per_task)
         self.classes_per_task = classes_per_task
 
+        self.nlayers = nlayers
         self.relu = torch.nn.ReLU()
 
         self.drop1 = torch.nn.Dropout(pdrop1)
@@ -32,20 +26,6 @@ class CATModel(torch.nn.Module):
         self.transfer = TransferLayer(classes_per_task, nhid, ncha, size)
         self.kt = KnowledgeTransfer(nhid, ncha, size, classes_per_task, n_head)
         self.smax = smax
-        self.maxpool = torch.nn.MaxPool2d(2)
-
-        print('CNN CAT')
-        print('pdrop1: ', pdrop1)
-        print('pdrop2: ', pdrop2)
-
-        """ (e.g., used with compression experiments)
-        lo,hi=0,2
-        self.efc1.weight.data.uniform_(lo,hi)
-        self.efc2.weight.data.uniform_(lo,hi)
-        self.efc3.weight.data.uniform_(lo,hi)
-        #"""
-
-        return
 
     # progressive style
     def forward(self, t, x, s=1, phase=None,
@@ -54,14 +34,32 @@ class CATModel(torch.nn.Module):
 
         if 'mcl' in phase:
             max_masks = self.mask(t, s=s)
-            gc1, gfc1, gfc2 = max_masks
+            gfc1, gfc2 = max_masks
 
             # Gated
-            h = self.maxpool(self.drop1(self.relu(self.mcl.c1(x))))
-            h = h*gc1.view(1, -1, 1, 1).expand_as(h)
-            h = h.view(x.size(0), -1)
+            h = self.drop1(x.view(x.size(0), -1))
+
             h = self.drop2(self.relu(self.mcl.fc1(h)))
             h = h*gfc1.expand_as(h)
+
+            h = self.drop2(self.relu(self.mcl.fc2(h)))
+            h = h*gfc2.expand_as(h)
+
+            y = []
+            for t in range(len(self.classes_per_task)):
+                y.append(self.mcl.mask_last[t](h))
+            return y, max_masks, None
+
+        elif 'mcl' in phase and 'multi-loss-joint-Tsim' in self.args.loss_type:
+            max_masks = self.mask(t, s=s)
+            gfc1, gfc2 = max_masks
+
+            # Gated
+            h = self.drop1(x.view(x.size(0), -1))
+
+            h = self.drop2(self.relu(self.mcl.fc1(h)))
+            h = h*gfc1.expand_as(h)
+
             h = self.drop2(self.relu(self.mcl.fc2(h)))
             h = h*gfc2.expand_as(h)
 
@@ -72,17 +70,18 @@ class CATModel(torch.nn.Module):
                 if self.training == True and similarity[pre_t]:
                     continue
                 elif self.training == False and check_federated.check_t(pre_t) == False:
+                    # Cautions: testing needs to be careful
                     continue
 
-                pre_gc1, pre_gfc1, pre_gfc2 = self.mask(torch.autograd.Variable(torch.LongTensor([pre_t]).cuda(), volatile=False), s=self.smax)
+                pre_gfc1, pre_gfc2 = self.mask(torch.autograd.Variable(torch.LongTensor([pre_t]).cuda(), volatile=False), s=self.smax)
                 pre_gfc1 = pre_gfc1.data.clone()
                 pre_gfc2 = pre_gfc2.data.clone()
 
-                pre_h = self.maxpool(self.drop1(self.relu(self.mcl.c1(x))))
-                pre_h = pre_h*pre_gc1.view(1, -1, 1, 1).expand_as(pre_h)
-                pre_h = pre_h.view(x.size(0), -1)
-                pre_h = self.drop2(self.relu(self.mcl.fc1(pre_h)))
+                pre_h = self.drop1(x.view(x.size(0), -1))
+
+                pre_h = self.drop2(self.relu(self.mcl.fc1(pre_h)))  # fc1 is changing
                 pre_h = pre_h*pre_gfc1.expand_as(pre_h)
+
                 pre_h = self.drop2(self.relu(self.mcl.fc2(pre_h)))
                 pre_h = pre_h*pre_gfc2.expand_as(pre_h)
 
@@ -108,38 +107,69 @@ class CATModel(torch.nn.Module):
                 return y, max_masks, y_attn
 
             else:
-                gc1, gfc1, gfc2 = self.Tsim_mask(t, history_mask_pre=history_mask_pre, similarity=similarity)
+                if 'no-isolate' in self.args.loss_type:
 
-                h_attn = self.maxpool(self.drop1(self.relu(self.mcl.c1(x))))
-                h_attn = h_attn*gc1.view(1, -1, 1, 1).expand_as(h_attn)
-                h_attn = h_attn.view(x.size(0), -1)
-                h_attn = self.drop2(self.relu(self.mcl.fc1(h_attn)))
-                h_attn = h_attn*gfc1.expand_as(h_attn)
-                h_attn = self.drop2(self.relu(self.mcl.fc2(h_attn)))
-                h_attn = h_attn*gfc2.expand_as(h_attn)
+                    y = []
+                    for t in range(len(self.classes_per_task)):
+                        y.append(self.mcl.mask_last[t](h))
 
-                y_attn = []
-                y = []
-                for t in range(len(self.classes_per_task)):
-                    y_attn.append(self.mcl.att_last[t](h_attn))
-                    y.append(self.mcl.mask_last[t](h))
+                    return y, max_masks, None
 
-                return y, max_masks, y_attn
+                else:
+                    # only care about myself, even in forward pass
+                    gfc1, gfc2 = self.Tsim_mask(t, history_mask_pre=history_mask_pre, similarity=similarity)
+
+                    h_attn = self.drop1(x.view(x.size(0), -1))
+                    h_attn = self.drop2(self.relu(self.mcl.fc1(h_attn)))
+                    h_attn = h_attn*gfc1.expand_as(h_attn)
+
+                    h_attn = self.drop2(self.relu(self.mcl.fc2(h_attn)))
+                    h_attn = h_attn*gfc2.expand_as(h_attn)
+
+                    y_attn = []
+                    y = []
+                    for t in range(len(self.classes_per_task)):
+                        y_attn.append(self.mcl.att_last[t](h_attn))
+                        y.append(self.mcl.mask_last[t](h))
+
+                    return y, max_masks, y_attn
 
         elif phase == 'transfer':
-            raise NotImplementedError
+            gfc1, gfc2 = pre_mask
+
+            # source domain data
+            h = self.drop1(x.view(x.size(0), -1))
+            h = self.drop2(self.relu(self.mcl.fc1(h)))
+            h = h*gfc1.expand_as(h)
+            h = self.drop2(self.relu(self.mcl.fc2(h)))
+            h = h*gfc2.expand_as(h)
+
+            y = []
+            for t in range(len(self.classes_per_task)):
+                y.append(self.transfer.transfer[pre_task][t](self.mcl.mask_last[pre_task](h)))
+            return y
 
         elif phase == 'reference':
-            raise NotImplementedError
+            gfc1, gfc2 = pre_mask
+
+            # no source domain
+            h = self.drop1(x.view(x.size(0), -1))
+            h = self.drop2(self.relu(self.transfer.fc1(h)))
+            h = h*gfc1.expand_as(h)
+            h = self.drop2(self.relu(self.transfer.fc2(h)))
+            h = h*gfc2.expand_as(h)
+
+            y = []
+            for t in range(len(self.classes_per_task)):
+                y.append(self.transfer.transfer[pre_task][t](self.transfer.last[pre_task](h)))
+            return y
 
     def mask(self, t, s=1, phase=None):
         # used by training
 
-        gc1 = self.gate(s*self.mcl.ec1(t))
         gfc1 = self.gate(s*self.mcl.efc1(t))
         gfc2 = self.gate(s*self.mcl.efc2(t))
-
-        return [gc1, gfc1, gfc2]
+        return [gfc1, gfc2]
 
     def Tsim_mask(self, t, history_mask_pre=None, similarity=None, phase=None):
         # find the distinct mask, used by block the backward pass
@@ -147,33 +177,27 @@ class CATModel(torch.nn.Module):
         # want aggregate Tsim
         if phase is None:
            # Tsim mask
-            Tsim_gc1 = torch.ones_like(self.gate(0*self.mcl.ec1(t)))
             Tsim_gfc1 = torch.ones_like(self.gate(0*self.mcl.efc1(t)))
             Tsim_gfc2 = torch.ones_like(self.gate(0*self.mcl.efc2(t)))
 
         for history_t in range(t):
             if history_t == 0:
-                Tsim_gc1_index = history_mask_pre[history_t][0].round().nonzero()
-                Tsim_gfc1_index = history_mask_pre[history_t][1].round().nonzero()
-                Tsim_gfc2_index = history_mask_pre[history_t][2].round().nonzero()
+                Tsim_gfc1_index = history_mask_pre[history_t][0].round().nonzero()
+                Tsim_gfc2_index = history_mask_pre[history_t][1].round().nonzero()
             else:
-                Tsim_gc1_index = (history_mask_pre[history_t][0] - history_mask_pre[history_t-1][0]).round().nonzero()
-                Tsim_gfc1_index = (history_mask_pre[history_t][1] - history_mask_pre[history_t-1][1]).round().nonzero()
-                Tsim_gfc2_index = (history_mask_pre[history_t][2] - history_mask_pre[history_t-1][2]).round().nonzero()
+                Tsim_gfc1_index = (history_mask_pre[history_t][0] - history_mask_pre[history_t-1][0]).round().nonzero()
+                Tsim_gfc2_index = (history_mask_pre[history_t][1] - history_mask_pre[history_t-1][1]).round().nonzero()
             if similarity[history_t] == 0:
-                Tsim_gc1[Tsim_gc1_index[:, 0], Tsim_gc1_index[:, 1]] = 0
                 Tsim_gfc1[Tsim_gfc1_index[:, 0], Tsim_gfc1_index[:, 1]] = 0
                 Tsim_gfc2[Tsim_gfc2_index[:, 0], Tsim_gfc2_index[:, 1]] = 0
 
-        return [Tsim_gc1, Tsim_gfc1, Tsim_gfc2]
+        return [Tsim_gfc1, Tsim_gfc2]
 
     def get_view_for(self, n, masks):
-        gc1, gfc1, gfc2 = masks
+        gfc1, gfc2 = masks
 
         if n == 'mcl.fc1.weight':
-            post = gfc1.data.view(-1, 1).expand_as(self.mcl.fc1.weight)
-            pre = gc1.data.view(-1, 1, 1).expand((self.mcl.ec1.weight.size(1), self.mcl.smid, self.mcl.smid)).contiguous().view(1, -1).expand_as(self.mcl.fc1.weight)
-            return torch.min(post, pre)
+            return gfc1.data.view(-1, 1).expand_as(self.mcl.fc1.weight)
         elif n == 'mcl.fc1.bias':
             return gfc1.data.view(-1)
         elif n == 'mcl.fc2.weight':
@@ -182,11 +206,25 @@ class CATModel(torch.nn.Module):
             return torch.min(post, pre)
         elif n == 'mcl.fc2.bias':
             return gfc2.data.view(-1)
-        elif n == 'mcl.c1.weight':
-            return gc1.data.view(-1, 1, 1, 1).expand_as(self.mcl.c1.weight)
-        elif n == 'mcl.c1.bias':
-            return gc1.data.view(-1)
         return None
+
+    def pre_model_generator(self, t, similarity, x):
+        pre_models = []
+        for pre_t in range(t):
+            if similarity[pre_t] == 0:
+                continue
+            pre_gfc1, pre_gfc2 = self.mask(torch.autograd.Variable(torch.LongTensor([pre_t]).cuda(), volatile=False), s=self.smax)
+
+            pre_h = self.drop1(x.view(x.size(0), -1))
+
+            pre_h = self.drop2(self.relu(self.mcl.fc1(pre_h)))  # fc1 is changing
+            pre_h = pre_h*pre_gfc1.expand_as(pre_h)
+
+            pre_h = self.drop2(self.relu(self.mcl.fc2(pre_h)))
+            pre_h = pre_h*pre_gfc2.expand_as(pre_h)
+
+            pre_models.append(pre_h.clone())
+        return pre_models
 
 
 class MainContinualLearning(torch.nn.Module):
@@ -195,17 +233,10 @@ class MainContinualLearning(torch.nn.Module):
 
         super(MainContinualLearning, self).__init__()
 
-        self.c1 = torch.nn.Conv2d(ncha, 64, kernel_size=size//8)
-        s = compute_conv_output_size(size, size//8)
-        s = s//2
-
-        self.smid = s
-
-        self.ec1 = torch.nn.Embedding(num_tasks, 64)
         self.efc1 = torch.nn.Embedding(num_tasks, nhid)
         self.efc2 = torch.nn.Embedding(num_tasks, nhid)
 
-        self.fc1 = torch.nn.Linear(64*self.smid*self.smid, nhid)
+        self.fc1 = torch.nn.Linear(ncha*size*size, nhid)
         self.fc2 = torch.nn.Linear(nhid, nhid)
 
         self.mask_last = torch.nn.ModuleList()
@@ -222,12 +253,7 @@ class TransferLayer(torch.nn.Module):
 
         super(TransferLayer, self).__init__()
 
-        self.c1 = torch.nn.Conv2d(ncha, 64, kernel_size=size//8)
-        s = compute_conv_output_size(size, size//8)
-        s = s//2
-        self.smid = s
-
-        self.fc1 = torch.nn.Linear(64*self.smid*self.smid, nhid)
+        self.fc1 = torch.nn.Linear(ncha*size*size, nhid)
         self.fc2 = torch.nn.Linear(nhid, nhid)
 
         self.fusion = torch.nn.Linear(nhid*2, nhid)
@@ -257,7 +283,6 @@ class KnowledgeTransfer(torch.nn.Module):
         for num_classes in classes_per_task:
             self.last.append(torch.nn.Linear(nhid, num_classes))
 
-        self.ec1 = torch.nn.Embedding(len(classes_per_task), 64)
         self.efc1 = torch.nn.Embedding(len(classes_per_task), nhid)
         self.efc2 = torch.nn.Embedding(len(classes_per_task), nhid)
 

@@ -12,12 +12,6 @@ from methods.hat_model import HATModel
 
 
 class HATStrategy(BaseStrategy):
-    """ Average Gradient Episodic Memory (A-GEM) strategy.
-
-    See AGEM plugin for details.
-    This strategy does not use task identities.
-    """
-
     def __init__(self, model, optimizer,
                  lamb=0.75, smax=400, clipgrad=10000,
                  train_mb_size: int = 1, train_epochs: int = 1,
@@ -32,7 +26,6 @@ class HATStrategy(BaseStrategy):
 
         self.lamb = lamb
         self.smax = smax
-        self.s = 0
         self.mask_pre = None
         self.mask_back = None
         self.clipgrad = clipgrad
@@ -101,6 +94,10 @@ class HATStrategy(BaseStrategy):
             self._after_training_epoch(**kwargs)
             self._periodic_eval(eval_streams, do_final=False)
 
+        # Final evaluation
+        self._periodic_eval(eval_streams, do_final=do_final)
+        self._after_training_exp(**kwargs)
+
         task_id = self.experience.current_experience
         task = torch.LongTensor([task_id]).cuda()
         mask = self.model.mask(task, s=self.smax)
@@ -118,10 +115,6 @@ class HATStrategy(BaseStrategy):
             vals = self.model.get_view_for(n, self.mask_pre)
             if vals is not None:
                 self.mask_back[n] = 1-vals
-
-        # Final evaluation
-        self._periodic_eval(eval_streams, do_final=do_final)
-        self._after_training_exp(**kwargs)
 
     def make_optimizer(self):
         super().make_optimizer()
@@ -146,7 +139,7 @@ class HATStrategy(BaseStrategy):
             self._before_forward(**kwargs)
             task_id = self.experience.current_experience
             task_id = torch.LongTensor([task_id]).to(self.device)
-            self.mb_output, masks = self.model(self.mb_x, task_id, self.s)
+            self.mb_output, masks = self.model(self.mb_x, task_id, s)
             self._after_forward(**kwargs)
 
             # Loss & Backward

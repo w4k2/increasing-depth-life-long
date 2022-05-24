@@ -1,0 +1,1 @@
+ll-stochastic-depth, lr=0.001, n_epochs=30, weight_decay=1e-05

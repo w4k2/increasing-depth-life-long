@@ -8,7 +8,8 @@ from avalanche.training.plugins import StrategyPlugin
 from avalanche.training.plugins.evaluation import default_logger
 from typing import Optional, Sequence, Union, List
 
-from methods.hat_model import HATModel
+# from methods.hat_model import HATModel
+from methods.hat_model_mlp import HATModel
 
 
 class HATStrategy(BaseStrategy):

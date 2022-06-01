@@ -12,13 +12,16 @@ import distutils.util
 
 from avalanche.benchmarks.datasets import MNIST, FashionMNIST, CIFAR10, SVHN
 from avalanche.benchmarks.generators import dataset_benchmark
-from avalanche.benchmarks.classic import PermutedMNIST, SplitCIFAR100, SplitMNIST, SplitCIFAR10, SplitTinyImageNet, CORe50
+from avalanche.benchmarks.classic import PermutedMNIST, SplitCIFAR100, SplitMNIST, SplitCIFAR10, SplitTinyImageNet
 from avalanche.evaluation.metrics.confusion_matrix import StreamConfusionMatrix
 from avalanche.training.strategies import BaseStrategy, EWC, GEM, Replay, SynapticIntelligence, Cumulative, LwF
 from avalanche.models import SimpleMLP
 from utils.mlflow_logger import MLFlowLogger
 from avalanche.training.plugins import EvaluationPlugin, LRSchedulerPlugin
 from avalanche.evaluation.metrics import accuracy_metrics, loss_metrics, forgetting_metrics
+from avalanche.benchmarks.datasets import default_dataset_location
+from avalanche.benchmarks.datasets.core50.core50 import CORe50Dataset
+from avalanche.benchmarks.scenarios.new_classes import NCScenario
 
 from avalanche.logging import InteractiveLogger, TextLogger
 from utils.notmnist import NOTMNIST
@@ -193,33 +196,22 @@ def get_data(dataset_name, n_experiences, seed, image_size, train_aug, test_aug)
     elif dataset_name == 'cores50':
         norm_stats = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
         train_transforms, eval_transforms = get_transforms(norm_stats, image_size, train_aug, test_aug)
-        benchmark = CORe50(scenario="nc", train_transform=train_transforms, eval_transform=eval_transforms)
+        
+
+        dataset_root = default_dataset_location('core50')
+        # Download the dataset and initialize filelists
+        train_dataset = CORe50Dataset(root=dataset_root, train=True, transform=train_transforms, download=True, mini=False)
+        test_dataset = CORe50Dataset(root=dataset_root, train=True, transform=eval_transforms, download=True, mini=False)
+        benchmark = NCScenario(train_dataset, test_dataset, 
+            n_experiences=n_experiences, task_labels=True, shuffle=True, seed=seed, 
+            class_ids_from_zero_in_each_exp=True)
+
         classes_per_task = [len(exp.classes_in_this_experience) for exp in benchmark.train_stream]
-
-        test_stream = []
-        for i in range(benchmark.n_experiences):
-            train_data = benchmark.train_stream[i]
-            classes_in_exp = train_data.classes_in_this_experience
-            classes_in_exp = set(classes_in_exp)
-            test_data = benchmark.test_stream[0]
-
-            images = []
-            targets = []
-            for img, t in zip(test_data.dataset._dataset._dataset.imgs, test_data.dataset._dataset._dataset.targets):
-                if t in classes_in_exp:
-                    images.append(img)
-                    targets.append(t)
-
-            test_data.dataset._dataset._dataset.imgs = images
-            test_data.dataset._dataset._dataset.targets = targets
-            test_data.classes_in_this_experience = classes_in_exp
-            test_stream.append(test_data)
 
     train_stream = benchmark.train_stream
     if not test_stream:
         test_stream = benchmark.test_stream
     return train_stream, test_stream, classes_per_task
-
 
 def get_multidataset_benchmark(order, image_size, train_aug, test_aug, seed):
     cifar10_norm_stats = (0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)
@@ -302,7 +294,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
     input_channels = 3
     evaluation_plugin = EvaluationPlugin(
         accuracy_metrics(minibatch=False, epoch=True, experience=True, stream=True),
-        forgetting_metrics(experience=True, stream=True),
+        # forgetting_metrics(experience=True, stream=True),
         loss_metrics(minibatch=False, epoch=True, experience=True, stream=True),
         loggers=loggers,
         suppress_warnings=True)

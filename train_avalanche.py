@@ -196,15 +196,14 @@ def get_data(dataset_name, n_experiences, seed, image_size, train_aug, test_aug)
     elif dataset_name == 'cores50':
         norm_stats = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
         train_transforms, eval_transforms = get_transforms(norm_stats, image_size, train_aug, test_aug)
-        
 
         dataset_root = default_dataset_location('core50')
         # Download the dataset and initialize filelists
         train_dataset = CORe50Dataset(root=dataset_root, train=True, transform=train_transforms, download=True, mini=False)
-        test_dataset = CORe50Dataset(root=dataset_root, train=True, transform=eval_transforms, download=True, mini=False)
-        benchmark = NCScenario(train_dataset, test_dataset, 
-            n_experiences=n_experiences, task_labels=True, shuffle=True, seed=seed, 
-            class_ids_from_zero_in_each_exp=True)
+        test_dataset = CORe50Dataset(root=dataset_root, train=False, transform=eval_transforms, download=True, mini=False)
+        benchmark = NCScenario(train_dataset, test_dataset,
+                               n_experiences=n_experiences, task_labels=True, shuffle=True, seed=seed,
+                               class_ids_from_zero_in_each_exp=True)
 
         classes_per_task = [len(exp.classes_in_this_experience) for exp in benchmark.train_stream]
 
@@ -212,6 +211,7 @@ def get_data(dataset_name, n_experiences, seed, image_size, train_aug, test_aug)
     if not test_stream:
         test_stream = benchmark.test_stream
     return train_stream, test_stream, classes_per_task
+
 
 def get_multidataset_benchmark(order, image_size, train_aug, test_aug, seed):
     cifar10_norm_stats = (0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)

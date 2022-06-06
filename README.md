@@ -24,7 +24,7 @@ If instalation of avalanche-lib via pip was not sucessful, please install it man
 
 ```
 conda activate ll-increasing-depth
-pip install avalanche==0.2.0
+pip install avalanche-lib==0.1.0
 ```
 
 ## Experiment results

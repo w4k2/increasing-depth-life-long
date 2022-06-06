@@ -14,12 +14,12 @@ def main():
         r'EWC \cite{DBLP:journals/corr/KirkpatrickPRVD16}': [
             ['76073c529caf428da7f3d68f649209b7', '61fbbec0858c4b9fa1438c09010a97d9', 'ee0377e0883e4a6d8f399a8e3a608d10', 'f4ae4a6986044d588b39f06297714856', '8c9dd72c9c974021abbfce3bd7b490c0'],
             ['3631e37897604ab4845c3cf9cf12b89e', 'a5f8df8c08a74b95a6cfadaee8ef1658', '3b2fd8ec871e4119906e56e0f2a151b5', '5cdd21a24caa4706a8c3fdeca64ef099', 'c92d7e11f7dc4dc6b4d3d36e4cc64b1f'],
-            [None, None, None, None, None],
+            ['c447e17e025947c99352ccb9f6beb68f', 'b7f8b0363c2c44e8b059180c1f988c88', '2e5639de0db1497eaf3ad45983f5627f', '67effaaca59946d1a2c776fd2399bd28', '3defaca4dfc249fbaffe248ba747d990'],
         ],
         r'ER \cite{DBLP:journals/corr/abs-1902-10486}': [
             ['46aae2323aea487aa37e28dde368d2b0', 'eeabf8f4d9614edd8123ffb1751dfd63', '8bf82c9490ef48fe94c9b2577b42b0f6', '40a3970e1ec644bb90ed7a2de4df4353', 'cff2bf5764984fdb9ecfe2adcfc1b945'],
             ['24feac44583844499e9f4908835c80d5', '6c7b8a96cea3433db1dfedeaf05a859a', '739859dcecf14a2fb0790357e20e242d', '65f074de0f1a4031850c0009ef000559', 'b5d020a2ed524fec93abfc02839b2443'],
-            ['9fcd5b53d7c14a98a729bd8ed69039dd', 'bc2551f188d14550b2abf7bf02555eb3', '01f10d41a97647e7af6d12d42f5e3d51', '1be6fa11d69641cebba4eb754a8cc4c4', 'a02e9f40606d4ab0b707ac6ffce41aa1'],
+            [None, None, None, None, None],
         ],
         r'A-GEM \cite{DBLP:journals/corr/abs-1812-00420}': [
             ['0c7f7156b6044b52b7ccbbcbca59c649', '0c2d264e07dd4733b2356a424aa1c5fc', '42d13c77ba1a45b4a75f646f716ee3b6', 'cbbb676caf714e3f86a7e5e442282c40', '1f8d7cee06e247d298d1676bdcf2971a'],
@@ -51,12 +51,12 @@ def main():
         r'EWC \cite{DBLP:journals/corr/KirkpatrickPRVD16}': [
             ['6ce642ba84484e4590458a61b73dbbe7', '0688779947fd496a890fd0f2494493e8', '81234edf47b645908d89b4a2ccc2d1b9', '4e96adca217a4c4ea1c65fa8efa12cb0', 'df785c3e21674995a531e7a17e76f53e'],
             ['57a5bf176df8483ab52a8eceaa06675c', 'adbc4d8cead44ef59d3f36db0dc11381', 'a4168977b22c4e92815fb5d213331192', 'bb68f28384b44096b19e88b72a3a50ea', '6671438931b349fa9d363cdf3053703c'],
-            [None, None, None, None, None],
+            ['2286da8b59ae4fd4ab57e0089d699657', '971bc721d2be496a981bb2daaa06317a', 'f38d472655864b69b0ce508f26f51158', '16431d0d5a744e5a8e9b0b63373500f5', '5bc961430f92499e8caa3ff08313199e'],
         ],
         r'ER \cite{DBLP:journals/corr/abs-1902-10486}': [
             ['7299961ddfc94f7b835c5cbaea7436d9', '6685595dc6074ed48e92ab490ce0a039', '21f469599c4e42218022ae185cb53c3e', 'b6ff39f4c6ee423ba74df902fa2c5271', 'd11dd8a241084bce97511322b7d0a741'],
             ['2f5bc0afbce04d5a8bea033d6a8ef1ba', '7985cab2d91545e0893d705da7be50e5', 'a2d2b5e72ebd4dcbbc9f2cda2f9e81d5', 'd7d92cefe8864d488ee75a543f110d86', '8a0f6b6d07fb4087a5a20b2367fec0d4'],
-            ['10ad8ed78bbd4f6caae4a965781cebfe', '4cbe7225f3c44e74b4421c35ef3edcfc', '7c65a8c068fa4363933ea0a4367c7b90', '51c599f266b44355ba3a9aab6b323c5d', 'fbe4e507f6c24be4942b564b2c3abb83'],
+            [None, None, None, None, None],
         ],
         r'A-GEM \cite{DBLP:journals/corr/abs-1812-00420}': [
             ['77b14fad8723461d94ce6acd5407e62a', 'bf3bbf6fb1bb4fa18264ec8066ba4653', '66ab2af44beb4aab9e664d4279304215', '4aebed10ef9a4e9cb92e3e973b4692f4', '913c72664b184b9fa165496534e721c5'],

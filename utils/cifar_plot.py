@@ -44,7 +44,7 @@ def main():
 
 
     results_list = [runs_cifar_wo_pretraining, runs_cifar_w_pretraining, runs_tinyimagenet_wo_pretraining, runs_tinyimagenet_w_pretraining]
-    results_names = ['SplitCifar w/o pretraining', 'SplitCifar w pretraining', 'SplitTinyImagenet w/o pretraining', 'SplitTinyImagenet w pretraining']
+    results_names = ['Split Cifar w/o pretraining', 'Split Cifar w/ pretraining', 'Split Tiny ImageNet w/o pretraining', 'Split Tiny ImageNet w/ pretraining']
     colors = sns.color_palette("husl", 7)
     color_dict = {
         'Upperbound': colors[0],
@@ -78,8 +78,11 @@ def main():
 
             plt.xticks(list(range(0, 20, 2)))
             plt.xlim(left=0, right=19)
+            if i < 2:
+                plt.ylim(bottom=0.3, top=0.95)
+            else:
+                plt.ylim(bottom=0.25, top=0.75)
             if i % 2 == 1:
-                print(handles)
                 plt.legend(handles=handles, labels=list(color_dict.keys()), loc='center left', bbox_to_anchor=(1, 0.5))
             plt.title(name)
             if i > 1:

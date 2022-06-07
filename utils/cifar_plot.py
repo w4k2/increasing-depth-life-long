@@ -302,11 +302,11 @@ def main():
         'A-GEM': colors[3],
         'PNN': colors[4],
         'LWF': colors[5],
-        'Ours': colors[6],
-        'HAT': colors[7],
-        'CAT': colors[8],
+        'HAT': colors[6],
+        'CAT': colors[7],
+        'Ours': colors[8],
     }
-    handles = []
+    handles = dict()
 
     with sns.axes_style("darkgrid"):
         for i, (runs, name) in enumerate(zip(results_list, results_names)):
@@ -314,6 +314,8 @@ def main():
             plt.subplot(2, 2, i+1)
 
             for method_name, run_ids in runs.items():
+                if method_name == 'Ours':
+                    continue
                 all_acc = []
                 experiment_id = 4 if 'Cifar' in name else 1
                 for run_i in range(5):
@@ -325,8 +327,8 @@ def main():
                 acc_std = np.std(all_acc, axis=0)
 
                 line_handle = plt.plot(acc_avrg_over_runs, color=color_dict[method_name])
-                if i % 2 == 0 and len(handles) < len(color_dict):
-                    handles.append(line_handle[0])
+                if i % 2 == 0 and not method_name in handles.keys():
+                    handles[method_name] = line_handle[0]
                 plt.fill_between(list(range(20)), acc_avrg_over_runs-acc_std, acc_avrg_over_runs+acc_std, alpha=0.3, color=color_dict[method_name])
 
             plt.xticks(list(range(0, 20, 2)))
@@ -350,7 +352,7 @@ def main():
         acc_avrg_over_runs = np.mean(all_acc, axis=0)
         acc_std = np.std(all_acc, axis=0)
         line_handle = plt.plot(acc_avrg_over_runs, color=color_dict['HAT'])
-        handles.append(line_handle[0])
+        handles['HAT'] = line_handle[0]
         plt.fill_between(list(range(20)), acc_avrg_over_runs-acc_std, acc_avrg_over_runs+acc_std, alpha=0.3, color=color_dict['HAT'])
 
         all_acc = []
@@ -361,7 +363,7 @@ def main():
         acc_avrg_over_runs = np.mean(all_acc, axis=0)
         acc_std = np.std(all_acc, axis=0)
         line_handle = plt.plot(acc_avrg_over_runs, color=color_dict['CAT'])
-        handles.append(line_handle[0])
+        handles['CAT'] = line_handle[0]
         plt.fill_between(list(range(20)), acc_avrg_over_runs-acc_std, acc_avrg_over_runs+acc_std, alpha=0.3, color=color_dict['CAT'])
 
         plt.subplot(2, 2, 3)
@@ -372,8 +374,7 @@ def main():
         all_acc = np.array(all_acc)
         acc_avrg_over_runs = np.mean(all_acc, axis=0)
         acc_std = np.std(all_acc, axis=0)
-        line_handle = plt.plot(acc_avrg_over_runs, color=color_dict['HAT'])
-        handles.insert(-2, line_handle[0])
+        plt.plot(acc_avrg_over_runs, color=color_dict['HAT'])
         plt.fill_between(list(range(20)), acc_avrg_over_runs-acc_std, acc_avrg_over_runs+acc_std, alpha=0.3, color=color_dict['HAT'])
 
         all_acc = []
@@ -383,16 +384,36 @@ def main():
         all_acc = np.array(all_acc) / 100
         acc_avrg_over_runs = np.mean(all_acc, axis=0)
         acc_std = np.std(all_acc, axis=0)
-        line_handle = plt.plot(acc_avrg_over_runs, color=color_dict['CAT'])
-        handles.insert(-2, line_handle[0])
+        plt.plot(acc_avrg_over_runs, color=color_dict['CAT'])
         plt.fill_between(list(range(20)), acc_avrg_over_runs-acc_std, acc_avrg_over_runs+acc_std, alpha=0.3, color=color_dict['CAT'])
 
+        for i, (runs, name) in enumerate(zip(results_list, results_names)):
+            num_tasks = 20
+            plt.subplot(2, 2, i+1)
+
+            method_name = 'Ours'
+            run_ids = runs['Ours']
+            all_acc = []
+            experiment_id = 4 if 'Cifar' in name else 1
+            for run_i in range(5):
+                run_accs = read_run_acc(run_ids[run_i], experiment_id)
+                plot_avrg_acc = get_average_acc(run_accs, num_tasks)
+                all_acc.append(plot_avrg_acc)
+            all_acc = np.array(all_acc)
+            acc_avrg_over_runs = np.mean(all_acc, axis=0)
+            acc_std = np.std(all_acc, axis=0)
+
+            line_handle = plt.plot(acc_avrg_over_runs, color=color_dict[method_name])
+            if i % 2 == 0 and not method_name in handles.keys():
+                handles['Ours'] = line_handle[0]
+            plt.fill_between(list(range(20)), acc_avrg_over_runs-acc_std, acc_avrg_over_runs+acc_std, alpha=0.3, color=color_dict[method_name])
+
         plt.subplot(2, 2, 2)
-        labels = list(color_dict.keys())
-        plt.legend(handles=handles, labels=labels, loc='center left', bbox_to_anchor=(1, 0.5))
+        legend_labels, legend_handles = zip(*list(handles.items()))
+        plt.legend(handles=legend_handles, labels=legend_labels, loc='center left', bbox_to_anchor=(1, 0.5))
 
         plt.subplot(2, 2, 4)
-        plt.legend(handles=handles, labels=labels, loc='center left', bbox_to_anchor=(1, 0.5))
+        plt.legend(handles=legend_handles, labels=legend_labels, loc='center left', bbox_to_anchor=(1, 0.5))
 
     plt.show()
 

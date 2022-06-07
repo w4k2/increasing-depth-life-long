@@ -324,7 +324,7 @@ def main():
                 acc_avrg_over_runs = np.mean(all_acc, axis=0)
                 acc_std = np.std(all_acc, axis=0)
 
-                line_handle = plt.plot(acc_avrg_over_runs, label=method_name, color=color_dict[method_name])
+                line_handle = plt.plot(acc_avrg_over_runs, color=color_dict[method_name])
                 if i % 2 == 0 and len(handles) < len(color_dict):
                     handles.append(line_handle[0])
                 plt.fill_between(list(range(20)), acc_avrg_over_runs-acc_std, acc_avrg_over_runs+acc_std, alpha=0.3, color=color_dict[method_name])
@@ -349,8 +349,8 @@ def main():
         all_acc = np.array(all_acc)
         acc_avrg_over_runs = np.mean(all_acc, axis=0)
         acc_std = np.std(all_acc, axis=0)
-        line_handle = plt.plot(acc_avrg_over_runs, label='HAT', color=color_dict['HAT'])
-        handles.insert(-2, line_handle[0])
+        line_handle = plt.plot(acc_avrg_over_runs, color=color_dict['HAT'])
+        handles.append(line_handle[0])
         plt.fill_between(list(range(20)), acc_avrg_over_runs-acc_std, acc_avrg_over_runs+acc_std, alpha=0.3, color=color_dict['HAT'])
 
         all_acc = []
@@ -360,8 +360,8 @@ def main():
         all_acc = np.array(all_acc) / 100
         acc_avrg_over_runs = np.mean(all_acc, axis=0)
         acc_std = np.std(all_acc, axis=0)
-        line_handle = plt.plot(acc_avrg_over_runs, label='CAT', color=color_dict['CAT'])
-        handles.insert(-1, line_handle[0])
+        line_handle = plt.plot(acc_avrg_over_runs, color=color_dict['CAT'])
+        handles.append(line_handle[0])
         plt.fill_between(list(range(20)), acc_avrg_over_runs-acc_std, acc_avrg_over_runs+acc_std, alpha=0.3, color=color_dict['CAT'])
 
         plt.subplot(2, 2, 3)
@@ -372,7 +372,7 @@ def main():
         all_acc = np.array(all_acc)
         acc_avrg_over_runs = np.mean(all_acc, axis=0)
         acc_std = np.std(all_acc, axis=0)
-        line_handle = plt.plot(acc_avrg_over_runs, label='HAT', color=color_dict['HAT'])
+        line_handle = plt.plot(acc_avrg_over_runs, color=color_dict['HAT'])
         handles.insert(-2, line_handle[0])
         plt.fill_between(list(range(20)), acc_avrg_over_runs-acc_std, acc_avrg_over_runs+acc_std, alpha=0.3, color=color_dict['HAT'])
 
@@ -383,15 +383,16 @@ def main():
         all_acc = np.array(all_acc) / 100
         acc_avrg_over_runs = np.mean(all_acc, axis=0)
         acc_std = np.std(all_acc, axis=0)
-        line_handle = plt.plot(acc_avrg_over_runs, label='CAT', color=color_dict['CAT'])
+        line_handle = plt.plot(acc_avrg_over_runs, color=color_dict['CAT'])
         handles.insert(-2, line_handle[0])
         plt.fill_between(list(range(20)), acc_avrg_over_runs-acc_std, acc_avrg_over_runs+acc_std, alpha=0.3, color=color_dict['CAT'])
 
         plt.subplot(2, 2, 2)
-        plt.legend(handles=handles, labels=list(color_dict.keys()), loc='center left', bbox_to_anchor=(1, 0.5))
+        labels = list(color_dict.keys())
+        plt.legend(handles=handles, labels=labels, loc='center left', bbox_to_anchor=(1, 0.5))
 
         plt.subplot(2, 2, 4)
-        plt.legend(handles=handles, labels=list(color_dict.keys()), loc='center left', bbox_to_anchor=(1, 0.5))
+        plt.legend(handles=handles, labels=labels, loc='center left', bbox_to_anchor=(1, 0.5))
 
     plt.show()
 

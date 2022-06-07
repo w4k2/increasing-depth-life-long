@@ -55,6 +55,7 @@ def main():
         'LWF': colors[5],
         'Ours': colors[6],
     }
+    handles = []
 
     with sns.axes_style("darkgrid"):
         for i, (runs, name) in enumerate(zip(results_list, results_names)):
@@ -70,12 +71,16 @@ def main():
                 acc_std = np.std(all_acc, axis=0)
 
                 plt.subplot(2, 2, i+1)
-                plt.plot(acc_avrg_over_runs, label=method_name, color=color_dict[method_name])
+                line_handle = plt.plot(acc_avrg_over_runs, label=method_name, color=color_dict[method_name])
+                if i % 2 == 0 and len(handles) < len(color_dict):
+                    handles.append(line_handle[0])
                 plt.fill_between(list(range(20)), acc_avrg_over_runs-acc_std, acc_avrg_over_runs+acc_std, alpha=0.3, color=color_dict[method_name])
 
             plt.xticks(list(range(0, 20, 2)))
             plt.xlim(left=0, right=19)
-            plt.legend()
+            if i % 2 == 1:
+                print(handles)
+                plt.legend(handles=handles, labels=list(color_dict.keys()), loc='center left', bbox_to_anchor=(1, 0.5))
             plt.title(name)
             if i > 1:
                 plt.xlabel('number of tasks')

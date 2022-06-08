@@ -1,0 +1,15 @@
+artifact_uri: file:///home/jedrzejkozal/Documents/stochastic-depth-data-streams/mlruns/9/cf6f479cbc9547a6b5e18ddc501a923f/artifacts
+end_time: 1654540298499
+entry_point_name: ''
+experiment_id: '9'
+lifecycle_stage: active
+name: ''
+run_id: cf6f479cbc9547a6b5e18ddc501a923f
+run_uuid: cf6f479cbc9547a6b5e18ddc501a923f
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1654534949985
+status: 3
+tags: []
+user_id: jkozal

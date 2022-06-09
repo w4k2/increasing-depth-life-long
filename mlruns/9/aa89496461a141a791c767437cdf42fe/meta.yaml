@@ -1,0 +1,15 @@
+artifact_uri: file:///home/jedrzejkozal/Documents/stochastic-depth-data-streams/mlruns/9/aa89496461a141a791c767437cdf42fe/artifacts
+end_time: 1654763293912
+entry_point_name: ''
+experiment_id: '9'
+lifecycle_stage: active
+name: ''
+run_id: aa89496461a141a791c767437cdf42fe
+run_uuid: aa89496461a141a791c767437cdf42fe
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1654749226006
+status: 3
+tags: []
+user_id: ubuntu

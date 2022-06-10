@@ -14,17 +14,17 @@ def main():
         r'EWC \cite{DBLP:journals/corr/KirkpatrickPRVD16}': [
             ['76073c529caf428da7f3d68f649209b7', '61fbbec0858c4b9fa1438c09010a97d9', 'ee0377e0883e4a6d8f399a8e3a608d10', 'f4ae4a6986044d588b39f06297714856', '8c9dd72c9c974021abbfce3bd7b490c0'],
             ['3631e37897604ab4845c3cf9cf12b89e', 'a5f8df8c08a74b95a6cfadaee8ef1658', '3b2fd8ec871e4119906e56e0f2a151b5', '5cdd21a24caa4706a8c3fdeca64ef099', 'c92d7e11f7dc4dc6b4d3d36e4cc64b1f'],
-            [None, None, None, None, None],
+            ['c447e17e025947c99352ccb9f6beb68f', 'b7f8b0363c2c44e8b059180c1f988c88', '2e5639de0db1497eaf3ad45983f5627f', '67effaaca59946d1a2c776fd2399bd28', '3defaca4dfc249fbaffe248ba747d990'],
         ],
         r'ER \cite{DBLP:journals/corr/abs-1902-10486}': [
             ['46aae2323aea487aa37e28dde368d2b0', 'eeabf8f4d9614edd8123ffb1751dfd63', '8bf82c9490ef48fe94c9b2577b42b0f6', '40a3970e1ec644bb90ed7a2de4df4353', 'cff2bf5764984fdb9ecfe2adcfc1b945'],
             ['24feac44583844499e9f4908835c80d5', '6c7b8a96cea3433db1dfedeaf05a859a', '739859dcecf14a2fb0790357e20e242d', '65f074de0f1a4031850c0009ef000559', 'b5d020a2ed524fec93abfc02839b2443'],
-            [None, None, None, None, None],
+            ['0625aacb992244dab425cf7a9dd49c8a', '41388987cd22496f887f181c4788981e'],
         ],
         r'A-GEM \cite{DBLP:journals/corr/abs-1812-00420}': [
             ['0c7f7156b6044b52b7ccbbcbca59c649', '0c2d264e07dd4733b2356a424aa1c5fc', '42d13c77ba1a45b4a75f646f716ee3b6', 'cbbb676caf714e3f86a7e5e442282c40', '1f8d7cee06e247d298d1676bdcf2971a'],
             ['06cb3837219c4ae8b7da0f0e392882cd', 'def7013480ce449e9107547a39163289', '578c7dd017074da4b4e7fef482c60d35', 'd99302186bff4c27982a9899b6f0787b', 'a9711018e97f4d5f949d17c5fb2a5a1a'],
-            [None, None, None, None, None],
+            ['4f1beafbe7024afca8e450af7162821c', 'c92b1b96ae6740cca276d43a928344de', 'accc723dd8554d5c92fb509365dd36e6', '0a4e0920917a47118dbbe952ace15cd9', '6cb6338d0c0142b282b9113af7d47063'],
         ],
         r'PNN \cite{DBLP:journals/corr/RusuRDSKKPH16}': [
             ['2de7e46a8c2443ac8587542d470d7154', '46f3944ed802435098ba8c1206bd6ffe', '3f7278e5928e47aeb02e65a8fca46de0', '78a81252967546a4ab9e282d755e7e20', '9400d9e552974abd884ff0af8f8bcb48'],
@@ -34,7 +34,7 @@ def main():
         r'LWF \cite{DBLP:journals/corr/LiH16e}': [
             ['aa73b91cd0964bfab38c752bb32047c5', '67613a30419c445b862885a7903970b0', 'bda9f4f43c5a45daaae12cb7228dce43', '3a6aec25b4514510a866eaa5a6c495d9', '617278fe12ab40b2a2a42698dbea343c'],
             ['9c233fc60a334974a558d3b631de0feb', '504286b1453b44a19f83219e8d97d4b9', 'fa8f4c5357a24d498cada1c261da921b', '6858810a86094c089b63c3cb4e25463a', '0f6a32659efa48b68d57d27851fc9f4d'],
-            [None, None, None, None, None],
+            ['b3c86633780c469cb55658f8cae0794e', 'b42a755fe901424cb8989651ab27717f', '4af991ae51ca48fb9d15cfac7dc12dc9', '2d78e40e1f294cbcb8aeb321c7a69e3e', 'a50c16e475db4e76894729e712c2ec49'],
         ],
         'Ours': [
             ['375c3e34198d42528207bf6efca58b16', '1e04d877656b4d18b123a568d24a381d', '30f5d1ef87f4430590ca4e48fc803d8d', '110cba2ebc0447b5b5294ed87ae45e7a', '2c820fda1afc4aa1965edbc7c962788e'],

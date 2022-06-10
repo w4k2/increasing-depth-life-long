@@ -1,6 +1,6 @@
-# Increasing Depth of Neural Networks for Life-long Learning
+# Continual learning with Expanding Neural Network Depth
 
-Code and experiemet results for paper Increasing Depth of Neural Networks for Life-longLearning.
+Code and experiemet results for paper Continual learning with Expanding Neural Network Depth.
 
 Implemented in Pytorch with utilization of avalanche library (https://avalanche.continualai.org/). CUDA version >= 11.0.
 

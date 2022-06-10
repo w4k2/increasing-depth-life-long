@@ -14,7 +14,7 @@ def main():
         r'EWC \cite{DBLP:journals/corr/KirkpatrickPRVD16}': [
             ['76073c529caf428da7f3d68f649209b7', '61fbbec0858c4b9fa1438c09010a97d9', 'ee0377e0883e4a6d8f399a8e3a608d10', 'f4ae4a6986044d588b39f06297714856', '8c9dd72c9c974021abbfce3bd7b490c0'],
             ['3631e37897604ab4845c3cf9cf12b89e', 'a5f8df8c08a74b95a6cfadaee8ef1658', '3b2fd8ec871e4119906e56e0f2a151b5', '5cdd21a24caa4706a8c3fdeca64ef099', 'c92d7e11f7dc4dc6b4d3d36e4cc64b1f'],
-            ['c447e17e025947c99352ccb9f6beb68f', 'b7f8b0363c2c44e8b059180c1f988c88', '2e5639de0db1497eaf3ad45983f5627f', '67effaaca59946d1a2c776fd2399bd28', '3defaca4dfc249fbaffe248ba747d990'],
+            [None, None, None, None, None],
         ],
         r'ER \cite{DBLP:journals/corr/abs-1902-10486}': [
             ['46aae2323aea487aa37e28dde368d2b0', 'eeabf8f4d9614edd8123ffb1751dfd63', '8bf82c9490ef48fe94c9b2577b42b0f6', '40a3970e1ec644bb90ed7a2de4df4353', 'cff2bf5764984fdb9ecfe2adcfc1b945'],
@@ -29,7 +29,7 @@ def main():
         r'PNN \cite{DBLP:journals/corr/RusuRDSKKPH16}': [
             ['2de7e46a8c2443ac8587542d470d7154', '46f3944ed802435098ba8c1206bd6ffe', '3f7278e5928e47aeb02e65a8fca46de0', '78a81252967546a4ab9e282d755e7e20', '9400d9e552974abd884ff0af8f8bcb48'],
             ['98231e19162a4be49d6255eb223d0d17', 'c7e5fa154c474884ab786a6935484bff', '95765e3d72934c17868c702d2d887187', '605e92667a4b40cbb3efc2f11e22b359', '30667327abdc44bf928b78bf7ff5b0f4'],
-            [None, None, None, None, None],
+            ['07f9612ec746475bb393a167a5ceb37b', '1ac968b8b0994c3f893f60bedede1325', 'fed9d5665d6548e69da01452221818a0', '12076875711d4d1f91d0c6f1779bcb05', '104e45fd4c244622abfb0bd084f59efc'],
         ],
         r'LWF \cite{DBLP:journals/corr/LiH16e}': [
             ['aa73b91cd0964bfab38c752bb32047c5', '67613a30419c445b862885a7903970b0', 'bda9f4f43c5a45daaae12cb7228dce43', '3a6aec25b4514510a866eaa5a6c495d9', '617278fe12ab40b2a2a42698dbea343c'],
@@ -51,39 +51,39 @@ def main():
         r'EWC \cite{DBLP:journals/corr/KirkpatrickPRVD16}': [
             ['6ce642ba84484e4590458a61b73dbbe7', '0688779947fd496a890fd0f2494493e8', '81234edf47b645908d89b4a2ccc2d1b9', '4e96adca217a4c4ea1c65fa8efa12cb0', 'df785c3e21674995a531e7a17e76f53e'],
             ['57a5bf176df8483ab52a8eceaa06675c', 'adbc4d8cead44ef59d3f36db0dc11381', 'a4168977b22c4e92815fb5d213331192', 'bb68f28384b44096b19e88b72a3a50ea', '6671438931b349fa9d363cdf3053703c'],
-            ['2286da8b59ae4fd4ab57e0089d699657', '971bc721d2be496a981bb2daaa06317a', 'f38d472655864b69b0ce508f26f51158', '16431d0d5a744e5a8e9b0b63373500f5', '5bc961430f92499e8caa3ff08313199e'],
+            ['5bc961430f92499e8caa3ff08313199e', '16431d0d5a744e5a8e9b0b63373500f5', 'f38d472655864b69b0ce508f26f51158', '971bc721d2be496a981bb2daaa06317a', '2286da8b59ae4fd4ab57e0089d699657'],
         ],
         r'ER \cite{DBLP:journals/corr/abs-1902-10486}': [
             ['7299961ddfc94f7b835c5cbaea7436d9', '6685595dc6074ed48e92ab490ce0a039', '21f469599c4e42218022ae185cb53c3e', 'b6ff39f4c6ee423ba74df902fa2c5271', 'd11dd8a241084bce97511322b7d0a741'],
             ['2f5bc0afbce04d5a8bea033d6a8ef1ba', '7985cab2d91545e0893d705da7be50e5', 'a2d2b5e72ebd4dcbbc9f2cda2f9e81d5', 'd7d92cefe8864d488ee75a543f110d86', '8a0f6b6d07fb4087a5a20b2367fec0d4'],
-            [None, None, None, None, None],
+            ['cc172da9f8b047ecabc13e3f018915fc', '4d3db647b34547db85ebab99cefc09c7'],
         ],
         r'A-GEM \cite{DBLP:journals/corr/abs-1812-00420}': [
             ['77b14fad8723461d94ce6acd5407e62a', 'bf3bbf6fb1bb4fa18264ec8066ba4653', '66ab2af44beb4aab9e664d4279304215', '4aebed10ef9a4e9cb92e3e973b4692f4', '913c72664b184b9fa165496534e721c5'],
             ['622b70f5b8084802b0c31718fd56d177', '148031b8f7104b1c90ca4bd88ea09f90', '5a6ae1b854b94e6b895e26244356f7c4', 'dadfcbf7c6be44d69ae45c9a2fa887e1', '657920bc101843da9aa1474506dff755'],
-            [None, None, None, None, None],
+            ['a344256c53224d189977fddb8f4a664f', '6e0662889b214138b1bddd5e0f923eda', '08a32c50df4c4435b18d05f7af335cd6', '082c67356a0f447b9775b239d1e08e2f', '322eb00c0c6b425fb530735de7745e70'],
         ],
-        r'PNN \cite{DBLP:journals/corr/RusuRDSKKPH16}': [
-            ['c405d5b2d4864260b0b06af7d8ad2357', '864affdda0824ebfb9ad219b0f8508fa', 'f4e8b6c312d448689ea3a07847fa6d74', '9578d0fd7fe14db3a58a820ed3aacae9', 'a97b539a3d3b4db783f9d143609aaf0c'],
-            ['e41ec60f1a704236aeb43c5aba718956', 'd05fa2da9a9a46ef9cf97069a4507ba4', '3c8c8401983d468fb3b7654ba50ffe15', 'c03e0c1ad9b4449ebe958e012329105b', 'cebfa3fe1d9a4e77867c32cd5e216a83'],
-            [None, None, None, None, None],
-        ],
+        # r'PNN \cite{DBLP:journals/corr/RusuRDSKKPH16}': [
+        #     ['c405d5b2d4864260b0b06af7d8ad2357', '864affdda0824ebfb9ad219b0f8508fa', 'f4e8b6c312d448689ea3a07847fa6d74', '9578d0fd7fe14db3a58a820ed3aacae9', 'a97b539a3d3b4db783f9d143609aaf0c'],
+        #     ['e41ec60f1a704236aeb43c5aba718956', 'd05fa2da9a9a46ef9cf97069a4507ba4', '3c8c8401983d468fb3b7654ba50ffe15', 'c03e0c1ad9b4449ebe958e012329105b', 'cebfa3fe1d9a4e77867c32cd5e216a83'],
+        #     [None, None, None, None, None],
+        # ],
         r'LWF \cite{DBLP:journals/corr/LiH16e}': [
             ['b11c67b2b250447386ccf6761069df3e', '5ed58dcddf034f20b3880a00fd3b9c99', 'b4fbf6b731b3478a8cbfa431e6bcbc55', '0721fc99ff1d462589257c7763bf0757', '0c8842ba3b3a48918f5d989bece75ff5'],
             ['8ec8937ed43840d5816ab73137ba691e', 'b67c72e93c9742759fbd931db94889c8', 'fc5f682848bf430eba6e0efeb0eae36a', '12396194a938478e90314aa9764801ae', '198634c44431483f8ff3340b3f480e10'],
-            [None, None, None, None, None],
+            ['65af3e6161774372b12be07d26fcc689', 'b9ffdf7d0fd84033b78f56bf7aa285e6', '630cbe0a131143bd994ca103bc0eae7e', '399d07ae54494206a7d46c60dc6598dc', 'd80fa368aa2444979dc886efee3035a4'],
         ],
         'Ours': [
             ['0213d3aad73e4b9b8a968f6446d8b83d', 'ade72c7c04dd4ba397b2f8bcb72cbeab', 'cb7c412cac6f4b6cb0331ad7ce01c9e3', '37bc9a366c73499ebf4ce17dd65a5c8b', '478400fa86de489c939bba93bb6abcd0'],
             ['8c0cbf9e430b4aefa0f2e4e30cd9b1e4', '085e9692e130475eb1d16e4a88e01fd7', '4158b5c745ce47aea25a17b2ca5cbbd8', 'b665260764d34b39ba0a64cfc3e5e4ca', '4c2a014e5ba34537ac908a22d19f64a5'],
-            [None, None, None, None, None],
+            ['db96bc1bfa5148fd8e6ee55c6524f08b', '362f0c42025542b480832f2a6f6bdc4d', 'c992ec5df36445df876c3271ac5060cd', '74c1b839b953450fbd7f9e7fe8eb5bc8', '17e42a2e1b18434da2c5204ed9c6d039'],
         ],
     }
     num_parameters = [0, 0, 0, 0, 0, 0, 0]
 
     # client = mlflow.tracking.MlflowClient('///home/pwr/Documents/stochastic-depth-v2/stochastic-depth-data-streams/mlruns/')
-    client = mlflow.tracking.MlflowClient('///home/jedrzejkozal/Documents/stochastic-depth-data-streams/mlruns/')
-    # client = mlflow.tracking.MlflowClient('///home/jkozal/Documents/PWr/stochastic_depth/mlruns/')
+    # client = mlflow.tracking.MlflowClient('///home/jedrzejkozal/Documents/stochastic-depth-data-streams/mlruns/')
+    client = mlflow.tracking.MlflowClient('///home/jkozal/Documents/PWr/stochastic_depth/mlruns/')
 
     table = []
     for num_param, (name, run_ids) in zip(num_parameters, runs_wo_pretraining.items()):
@@ -138,7 +138,7 @@ def get_row(client, num_param, name, run_ids):
     row.append(name)
     row.append(num_param)
 
-    for dataset_run_ids, experiment_id in zip(run_ids, (4, 1, 2)):
+    for dataset_run_ids, experiment_id in zip(run_ids, (4, 1, 9)):
         avrg_acc, acc_std, avrg_fm, fm_std = calc_average_metrics(dataset_run_ids, client, experiment_id)
         row.append(f'{avrg_acc}±{acc_std}')
         row.append(f'{avrg_fm}±{fm_std}')

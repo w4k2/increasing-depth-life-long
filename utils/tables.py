@@ -9,7 +9,7 @@ def main():
         'Upperbound': [
             ['7299df53d45f442cbd66dd74a2987044', '5e30ad287cb64572bcc7db330a026016', '68037f4b3f2d4bec870dcfcc6c0ae7c4', 'd13c12cc8aa7414f8cc30484e5495c37', 'b1d9d932d05b49aab0b8841d69add04f'],
             ['a4b88115c40044a3847c2cb1b9cd931f', '27c1bf3adf6a4d9e8781124f95935f23', 'fb1a96cec4854691aa5b027c14787b0b', '44c5d5e4152c40ac81e1a69709c1bfdf', '61dbee30d5b34c67ac1a199af85ba6e8'],
-            [None, None, None, None, None],
+            ['c6eb63042fca438b9ea3cb1ff0417764', 'e25a60b800224bdbac80036ab94d6251', '0e5956ae26e14fee8696e0333cf2df3e', '6fef79afad464442bc99b470c2074be4', 'f21bb1577b5c424d85e8b263662cda36'],
         ],
         r'EWC \cite{DBLP:journals/corr/KirkpatrickPRVD16}': [
             ['76073c529caf428da7f3d68f649209b7', '61fbbec0858c4b9fa1438c09010a97d9', 'ee0377e0883e4a6d8f399a8e3a608d10', 'f4ae4a6986044d588b39f06297714856', '8c9dd72c9c974021abbfce3bd7b490c0'],
@@ -39,14 +39,14 @@ def main():
         'Ours': [
             ['375c3e34198d42528207bf6efca58b16', '1e04d877656b4d18b123a568d24a381d', '30f5d1ef87f4430590ca4e48fc803d8d', '110cba2ebc0447b5b5294ed87ae45e7a', '2c820fda1afc4aa1965edbc7c962788e'],
             ['abaa33c8c9ce4e98bc56f65f79239732', '1cf83d2edad24c6ca1848c76b347ed50', '65358873c6394d1ba34feaa4f34a693f', 'd56a160ce9704c85a7c44d6f1837437f', '35f4d728ad554b5f9ab535152671ec27'],
-            [None, None, None, None, None],
+            ['708fb53689814a2f832fdb5199e65a76', '552aa9bffa744aa0b4ae69b8c006d32d', '877c131b1cd546d0a06635f943ce87b6', '05b3fbdd2c70490397b58f1ce5333473', '68f99ab7ba46402bbe472860578c36f7'],
         ],
     }
     runs_w_pretraining = {  # columns: name, #parameters, cifar100 acc, cifar100 FM, TIN acc, TIN FM, pmnist acc, pmnist FM
         'Upperbound': [
             ['4b19c8293100481eb13e77cb69a74a63', '991355734d0b46018761a01a19c9e2c2', '7daa6e8f75884745a3b4dff2546425f2', 'ed645bd069b14eefb06ef60c8ceed3b5', '6123aacb805f4427a473b0c355ead066'],
             ['0e38b56d2a5e456688629df43930e5c9', 'f8e434da1c184d7eb73245307237de23', '12aa7dad46644cf28e098a1cb62cfa6a', '173e02b046eb4dddb101c699a5982dda', '1d5bb51ac3cf4bcc98b1ce009704cfea'],
-            [None, None, None, None, None],
+            ['5aafe032a14948198e6596ffb43420c6', 'c0fc5bddf3d843b581fdaa3b0d367dbe', '407fa7c790db4726bafb6533d6e21b3a'],
         ],
         r'EWC \cite{DBLP:journals/corr/KirkpatrickPRVD16}': [
             ['6ce642ba84484e4590458a61b73dbbe7', '0688779947fd496a890fd0f2494493e8', '81234edf47b645908d89b4a2ccc2d1b9', '4e96adca217a4c4ea1c65fa8efa12cb0', 'df785c3e21674995a531e7a17e76f53e'],
@@ -108,7 +108,8 @@ def main():
     print("\n\n")
 
     mixed_runs = {
-        'ER': ['b47c4e4040d84cf8986033542c74a256', '682c1cc4d0a8465a9dd54a1528186a4a'],
+        'PNN': ['51ad21ef3b26459eb3b4533be56e02de'],
+        'ER': ['ede34692c14c4acbb7a88b91a35a5049', '54cd8b5bbedb46f58514680a28941eee'],
         'Ours': ['5833f8eb7c634bb6a8551fb1aa6d8fb7', '0f05d33f6360481eb317de1aadf8c480'],
     }
 

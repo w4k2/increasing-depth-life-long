@@ -251,6 +251,22 @@ def get_multidataset_benchmark(order, image_size, train_aug, test_aug, seed):
             raise ValueError("Invalid dataset name")
 
     benchmark = dataset_benchmark(train_datasets, test_datasets)
+    new_train_stream = []
+    for i, exp in enumerate(benchmark.train_stream):
+        new_dataset = exp.dataset
+        new_dataset.targets_task_labels = [i for _ in range(len(new_dataset.targets_task_labels))]
+        exp.dataset = new_dataset
+        new_train_stream.append(exp)
+    benchmark.train_stream = new_train_stream
+
+    new_test_stream = []
+    for i, exp in enumerate(benchmark.test_stream):
+        new_dataset = exp.dataset
+        new_dataset.targets_task_labels = [i for _ in range(len(new_dataset.targets_task_labels))]
+        exp.dataset = new_dataset
+        new_test_stream.append(exp)
+    benchmark.test_stream = new_test_stream
+
     return benchmark
 
 
@@ -361,7 +377,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         criterion = nn.CrossEntropyLoss()
         strategy = PNNModified(model, optimizer, criterion, args.lr, args.weight_decay,
                                train_mb_size=args.batch_size, eval_mb_size=args.batch_size,
-                               train_epochs=args.n_epochs, device=device, evaluator=evaluation_plugin, eval_every=-1)
+                               train_epochs=args.n_epochs, plugins=plugins, device=device, evaluator=evaluation_plugin, eval_every=-1)
     elif args.method == 'replay':
         model = resnet.resnet18_multihead(num_classes=classes_per_task[0], input_channels=input_channels, pretrained=args.pretrained)
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)

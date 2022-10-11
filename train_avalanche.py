@@ -368,7 +368,7 @@ def get_method(args, device, classes_per_task, use_mlflow=True):
         model = resnet.resnet18_multihead(num_classes=classes_per_task[0], input_channels=input_channels, pretrained=args.pretrained)
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         criterion = nn.CrossEntropyLoss()
-        strategy = AGEMModified(model, optimizer, criterion, patterns_per_exp=250, sample_size=256,
+        strategy = AGEMModified(model, optimizer, criterion, patterns_per_exp=500, sample_size=256,
                                 train_mb_size=args.batch_size, eval_mb_size=args.batch_size, device=device,
                                 train_epochs=args.n_epochs, plugins=plugins, evaluator=evaluation_plugin, eval_every=-1)
     elif args.method == 'pnn':

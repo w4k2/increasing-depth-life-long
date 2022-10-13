@@ -111,7 +111,7 @@ def main():
         # 'PNN': ['51ad21ef3b26459eb3b4533be56e02de'],
         'EWC': ['9d86861136354316840c9cd29ca0a63a', '599232bcbe5a4adb80f6c4a2b86951fa'],
         'ER': ['ede34692c14c4acbb7a88b91a35a5049', '54cd8b5bbedb46f58514680a28941eee'],
-        'A-GEM': ['227f6d1328184b82989ba80240d3b53d', 'a3e9d9a9ec4d4e39aef785455cc49a47'],
+        'A-GEM': ['45b61abd2101499ba53bf5d3a4183917', '849d134a1b5b47e891856fce9191d78d'],
         'Ours': ['5833f8eb7c634bb6a8551fb1aa6d8fb7', '0f05d33f6360481eb317de1aadf8c480'],
     }
 
